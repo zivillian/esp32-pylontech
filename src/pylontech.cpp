@@ -1,5 +1,48 @@
 #include "pylontech.h"
 
+Pylonframe::Pylonframe()
+    :Cid1(ControlIdentifyCode::Default)
+    ,Info("")
+    ,HasError(false)
+{}
+
+Pylonframe::Pylonframe(String data)
+    :Pylonframe()
+{
+    if (data.length() < 16 || 
+        data[0] != '~' ||
+        !data.endsWith("\r")){
+        HasError = true;
+        return;
+    }
+    MajorVersion = data[1] - 48;
+    MinorVersion = data[2] - 48;
+    Address = strtoul(data.substring(3,5).c_str(), 0, 16);
+    Cid1 = (ControlIdentifyCode)strtoul(data.substring(5,7).c_str(), 0, 16);
+    Cid2 = (CommandInformation)strtoul(data.substring(7,9).c_str(), 0, 16);
+    auto length = strtoul(data.substring(9,13).c_str(), 0, 16);
+    auto lchksum = length >> 12;
+    auto lenid = length & 0x0fff;
+    if (lchksum != Lchecksum(lenid)){
+        HasError = true;
+        return;
+    }
+    if (data.length() < 13 + lenid + 4){
+        HasError = true;
+        return;
+    }
+    Info = data.substring(13,  13 + lenid);
+    auto chksum = strtoul(data.substring(13 + lenid, 13 + lenid + 4).c_str(), 0, 16);
+    if (chksum != CalculateChecksum(data.substring(1, data.length()-5))){
+        HasError = true;
+        return;
+    }
+    if (data.length() > 13 + lenid + 4 + 1){
+        HasError = true;
+        return;
+    }
+}
+
 void Pylonframe::WriteTo(Print *target){
     target->print('~');
     auto output = Pylonframe::ChecksumPrint(target);
@@ -27,6 +70,15 @@ void Pylonframe::WriteTo(Print *target){
     target->print('\r');
 }
 
+uint16_t Pylonframe::CalculateChecksum(String data){
+    uint16_t result = 0;
+    for (size_t i = 0; i < data.length(); i++)
+    {
+        result += data[i];
+    }
+    return ChecksumPrint::Final(result);
+}
+
 uint8_t Pylonframe::Lchecksum(uint16_t length){
     if (length == 0) return 0;
     auto sum = (length & 0xf) +((length >> 4) & 0xf) + ((length >> 8) & 0xf);
@@ -44,8 +96,11 @@ size_t Pylonframe::ChecksumPrint::write(uint8_t arg){
     return _inner->write(arg);
 }
 
+uint16_t Pylonframe::ChecksumPrint::Final(uint16_t checksum){
+    auto remainder = checksum % 65536;
+    return (uint16_t)((~remainder) + 1);
+}
+
 void Pylonframe::ChecksumPrint::WriteChecksum(){
-    auto remainder = _checksum % 65536;
-    auto checksum = (uint16_t)((~remainder) + 1);
-    _inner->printf("%04X", checksum);
+    _inner->printf("%04X", Final(_checksum));
 }

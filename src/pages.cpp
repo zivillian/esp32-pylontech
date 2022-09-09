@@ -1,4 +1,5 @@
 #include "pages.h"
+#include "pylontech.h"
 
 void setupPages(AsyncWebServer *server, WiFiManager *wm){
   server->on("/", HTTP_GET, [](AsyncWebServerRequest *request){
@@ -36,23 +37,99 @@ void setupPages(AsyncWebServer *server, WiFiManager *wm){
     dbgln("[webserver] GET /debug");
     auto *response = request->beginResponseStream("text/html");
     sendResponseHeader(response, "Debug");
-    sendDebugForm(response, "");
+    sendDebugForm(response, "2", "0", "2", "4F", "");
     sendButton(response, "Back", "/");
     sendResponseTrailer(response);
     request->send(response);
   });
   server->on("/debug", HTTP_POST, [](AsyncWebServerRequest *request){
     dbgln("[webserver] POST /debug");
-    String cmd = "";
-    if (request->hasParam("cmd", true)){
-      cmd = request->getParam("cmd", true)->value();
+    String major = "2";
+    if (request->hasParam("v1", true)){
+      major = request->getParam("v1", true)->value();
     }
+    String minor = "0";
+    if (request->hasParam("v2", true)){
+      minor = request->getParam("v2", true)->value();
+    }
+    String address = "2";
+    if (request->hasParam("a", true)){
+      address = request->getParam("a", true)->value();
+    }
+    String cid2 = "4F";
+    if (request->hasParam("c2", true)){
+      cid2 = request->getParam("c2", true)->value();
+    }
+    String info = "";
+    if (request->hasParam("i", true)){
+      info = request->getParam("i", true)->value();
+    }
+    Pylonframe frame = Pylonframe();
+    frame.MajorVersion = major.toInt();
+    frame.MinorVersion = minor.toInt();
+    frame.Address = strtoul(address.c_str(), 0, 16);
+    frame.Cid2 = (CommandInformation)strtoul(cid2.c_str(), 0, 16);
     auto *response = request->beginResponseStream("text/html");
     sendResponseHeader(response, "Debug");
-    response->print("<pre>");
-    response->print(cmd);
+    response->print("<pre>&gt;&nbsp;");
+    frame.WriteTo(response);
+    response->print("<br/>&lt;&nbsp;");
+    String answer = "~200246000000FDB2\r";
+    frame = Pylonframe(answer);
+    response->print(answer);
+    response->printf("<br/>Version: %u.%u<br/>", frame.MajorVersion, frame.MinorVersion);
+    response->printf("Address: %u<br/>", frame.Address);
+    String cid1;
+    switch(frame.Cid1){
+      case ControlIdentifyCode::Default:
+        cid1 = "battery data";
+        break;
+      default:
+        cid1 = printf("%02X", frame.Cid1);
+        break;
+    }
+    response->printf("CID1: %s<br/>", cid1);
+    String rcid2;
+    switch (frame.Cid2)
+    {
+      case CommandInformation::Normal:
+        rcid2 = "Normal";
+        break;
+      case CommandInformation::VersionError:
+        rcid2 = "VER error";
+        break;
+      case CommandInformation::ChecksumError:
+        rcid2 = "CHKSUM error";
+        break;
+      case CommandInformation::LChecksumError:
+        rcid2 = "LCHKSUM error";
+        break;
+      case CommandInformation::InvalidCid2:
+        rcid2 = "CID2 invalid";
+        break;
+      case CommandInformation::CommandFormatError:
+        rcid2 = "Command format error";
+        break;
+      case CommandInformation::InvalidData:
+        rcid2 = "Invalid data";
+        break;
+      case CommandInformation::AdrError:
+        rcid2 = "ADR error";
+        break;
+      case CommandInformation::CommunicationError:
+        rcid2 = "Communication error";
+        break;      
+      default:
+        rcid2 = printf("%02X", frame.Cid2);
+        break;
+    }
+    response->printf("CID2: %s<br/>", rcid2);
+    response->printf("Info: %s<br/>", frame.Info);
+    if (frame.HasError){
+      response->printf("<br/>Something went wrong - unable to parse response<br/>", rcid2);
+    }
     response->print("</pre>");
-    sendDebugForm(response, cmd);
+    sendDebugForm(response, major, minor, address, cid2, info);
     sendButton(response, "Back", "/");
     sendResponseTrailer(response);
     request->send(response);
@@ -228,20 +305,70 @@ void sendTableRow(AsyncResponseStream *response, const char *name, uint32_t valu
       "</tr>", name, value);
 }
 
-
-void sendDebugForm(AsyncResponseStream *response, String command){
+void sendDebugForm(AsyncResponseStream *response, String major, String minor, String address, String cid2, String info){
     response->print("<form method=\"post\">");
     response->print("<table>"
       "<tr>"
         "<td>"
-          "<label for=\"cmd\">Command</label>"
+          "<label for=\"v1\">Major Version</label>"
         "</td>"
         "<td>");
-    response->printf("<input type=\"text\" id=\"cmd\" name=\"cmd\" value=\"%s\">", command);
+    response->printf("<input type=\"number\" min=\"0\" max=\"9\" id=\"v1\" name=\"v1\" value=\"%s\">", major);
     response->print("</td>"
-        "</tr>"
-      "</table>");
-    response->print("<button class=\"r\">Send</button>"
+      "</tr>"
+      "<tr>"
+        "<td>"
+          "<label for=\"v2\">Minor Version</label>"
+        "</td>"
+        "<td>");
+    response->printf("<input type=\"number\" min=\"0\" max=\"9\" id=\"v2\" name=\"v2\" value=\"%s\">", minor);
+    response->print("</td>"
+      "</tr>"
+      "<tr>"
+        "<td>"
+          "<label for=\"a\">Address</label>"
+        "</td>"
+        "<td>");
+    response->printf("<input type=\"number\" min=\"2\" max=\"13\" id=\"a\" name=\"a\" value=\"%s\">", address);
+    response->print("</td>"
+      "</tr>"
+        "<tr>"
+        "<td>"
+          "<label for=\"c2\">CID2</label>"
+        "</td>"
+        "<td>");
+    response->printf("<select id=\"c2\" name=\"c2\" data-value=\"%s\">", cid2);
+    response->print("<option value=\"42\">Get analog value, fixed point</option>"
+              "<option value=\"44\">Get alarm info</option>"
+              "<option value=\"47\">Get system parameter, fixed point</option>"
+              "<option value=\"4F\">Get protocol version</option>"
+              "<option value=\"51\">Get manufacturer info</option>"
+              "<option value=\"92\">Get charge, discharge management info</option>"
+              "<option value=\"93\">Get SN number of battery</option>"
+              "<option value=\"94\">Set value of charge, discharge management info</option>"
+              "<option value=\"95\">Turnoff</option>"
+              "<option value=\"96\">Get firmware info</option>"
+            "</select>"
+          "</td>"
+        "<td>"
+      "</tr>"
+        "<tr>"
+        "<td>"
+          "<label for=\"i\">Info</label>"
+        "</td>"
+        "<td>");
+    response->printf("<input type=\"text\" maxlength=\"4095\" id=\"i\" name=\"i\" value=\"%s\">", info);
+    response->print("</td>"
+          "</tr>"
+        "</table>"
+        "<button class=\"r\">Send</button>"
       "</form>"
       "<p></p>");
+    response->print("<script>"
+      "(function(){"
+        "var s = document.querySelectorAll('select[data-value]');"
+        "for(d of s){"
+          "d.querySelector(`option[value='${d.dataset.value}']`).selected=true"
+      "}})();"
+      "</script>");
 }

@@ -10,5 +10,5 @@
     void sendResponseTrailer(AsyncResponseStream *response);
     void sendButton(AsyncResponseStream *response, const char *title, const char *action, const char *css = "");
     void sendTableRow(AsyncResponseStream *response, const char *name, uint32_t value);
-    void sendDebugForm(AsyncResponseStream *response, String command);
+    void sendDebugForm(AsyncResponseStream *response, String address, String major, String minor, String cid2, String info);
 #endif /* PAGES_H */
