@@ -17,10 +17,10 @@ Pylonframe::Pylonframe(String data)
     }
     MajorVersion = data[1] - 48;
     MinorVersion = data[2] - 48;
-    Address = strtoul(data.substring(3,5).c_str(), 0, 16);
-    Cid1 = (ControlIdentifyCode)strtoul(data.substring(5,7).c_str(), 0, 16);
-    Cid2 = (CommandInformation)strtoul(data.substring(7,9).c_str(), 0, 16);
-    auto length = strtoul(data.substring(9,13).c_str(), 0, 16);
+    Address = strtoul(data.substring(3,5).c_str(), 0, HEX);
+    Cid1 = (ControlIdentifyCode)strtoul(data.substring(5,7).c_str(), 0, HEX);
+    Cid2 = (CommandInformation)strtoul(data.substring(7,9).c_str(), 0, HEX);
+    auto length = strtoul(data.substring(9,13).c_str(), 0, HEX);
     auto lchksum = length >> 12;
     auto lenid = length & 0x0fff;
     if (lchksum != Lchecksum(lenid)){
@@ -32,7 +32,7 @@ Pylonframe::Pylonframe(String data)
         return;
     }
     Info = data.substring(13,  13 + lenid);
-    auto chksum = strtoul(data.substring(13 + lenid, 13 + lenid + 4).c_str(), 0, 16);
+    auto chksum = strtoul(data.substring(13 + lenid, 13 + lenid + 4).c_str(), 0, HEX);
     if (chksum != CalculateChecksum(data.substring(1, data.length()-5))){
         HasError = true;
         return;
@@ -103,4 +103,30 @@ uint16_t Pylonframe::ChecksumPrint::Final(uint16_t checksum){
 
 void Pylonframe::ChecksumPrint::WriteChecksum(){
     _inner->printf("%04X", Final(_checksum));
+}
+
+Pylonframe::PylonInfo::PylonInfo(String info)
+    :Info(info)
+{}
+
+String Pylonframe::PylonInfo::HexDecode(String data){
+    String result;
+    if ((data.length() & 1) != 0) return result;
+    for (size_t i = 0; i < data.length(); i+=2)
+    {
+        result += (char)strtol(data.substring(i,i+2).c_str(), 0, HEX);
+    }
+    return result;
+}
+
+Pylonframe::PylonSerialnumber::PylonSerialnumber(String info)
+    :PylonInfo(info)
+{}
+
+uint8_t Pylonframe::PylonSerialnumber::Address(){
+    return strtoul(Info.substring(0,2).c_str(), 0, HEX);
+}
+
+String Pylonframe::PylonSerialnumber::Serialnumber(){
+    return HexDecode(Info.substring(2));    
 }

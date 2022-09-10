@@ -56,5 +56,20 @@
             Pylonframe(String data);
             void WriteTo(Print *target);
             uint16_t CalculateChecksum(String data);
+
+            class PylonInfo{
+                protected:
+                    String Info;
+                    static String HexDecode(String data);
+                public:
+                    PylonInfo(String info);
+            };
+
+            class PylonSerialnumber:PylonInfo{
+                public:
+                    uint8_t Address();
+                    String Serialnumber();
+                    PylonSerialnumber(String info);
+            };
     };
 #endif /* PYLONTECH_H */
