@@ -119,6 +119,14 @@ String Pylonframe::PylonInfo::HexDecode(String data){
     return result;
 }
 
+int16_t Pylonframe::PylonInfo::GetInt16(unsigned int begin){
+    return strtol(Info.substring(begin, begin+4).c_str(), 0, HEX);
+}
+
+uint16_t Pylonframe::PylonInfo::GetUInt16(unsigned int begin){
+    return strtoul(Info.substring(begin, begin+4).c_str(), 0, HEX);
+}
+
 Pylonframe::PylonSerialnumber::PylonSerialnumber(String info)
     :PylonInfo(info)
 {}
@@ -177,4 +185,60 @@ uint8_t Pylonframe::PylonFirmwareInfo::MainlineMinorVersion(){
 
 uint8_t Pylonframe::PylonFirmwareInfo::MainlinePatchVersion(){
     return strtoul(Info.substring(10,12).c_str(), 0, HEX);
+}
+
+Pylonframe::PylonSystemParameter::PylonSystemParameter(String info)
+    :PylonInfo(info)
+{}
+
+PylonInfoFlags Pylonframe::PylonSystemParameter::InfoFlags(){
+    return (PylonInfoFlags)strtoul(Info.substring(0,2).c_str(), 0, HEX);
+}
+
+float Pylonframe::PylonSystemParameter::CellHighVoltageLimit(){
+    return GetInt16(2) * 0.001;
+}
+
+float Pylonframe::PylonSystemParameter::CellLowVoltageLimit(){
+    return GetInt16(6) * 0.001;
+}
+
+float Pylonframe::PylonSystemParameter::CellUnderVoltageLimit(){
+    return GetInt16(10) * 0.001;
+}
+
+float Pylonframe::PylonSystemParameter::ChargeHighTemperatureLimit(){
+    return (GetInt16(14) - 2731) * 0.1;
+}
+
+float Pylonframe::PylonSystemParameter::ChargeLowTemperatureLimit(){
+    return (GetInt16(18) - 2731) * 0.1;
+}
+
+float Pylonframe::PylonSystemParameter::ChargeCurrentLimit(){
+    return GetInt16(22) * 0.01;
+}
+
+float Pylonframe::PylonSystemParameter::ModuleHighVoltageLimit(){
+    return GetUInt16(26) * 0.001;
+}
+
+float Pylonframe::PylonSystemParameter::ModuleLowVoltageLimit(){
+    return GetUInt16(30) * 0.001;
+}
+
+float Pylonframe::PylonSystemParameter::ModuleUnderVoltageLimit(){
+    return GetUInt16(34) * 0.001;
+}
+
+float Pylonframe::PylonSystemParameter::DischargeHighTemperatureLimit(){
+    return (GetInt16(38) - 2731) * 0.1;
+}
+
+float Pylonframe::PylonSystemParameter::DischargeLowTemperatureLimit(){
+    return (GetInt16(42) - 2731) * 0.1;
+}
+
+float Pylonframe::PylonSystemParameter::DischargeCurrentLimit(){
+    return GetInt16(46) * 0.01;
 }

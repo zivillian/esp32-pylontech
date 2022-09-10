@@ -3,6 +3,7 @@
     #include <Arduino.h>
     #define debugSerial Serial
     #define pylonSerial Serial2
+    #define DEBUG
     
     #ifdef DEBUG
     #define dbg(x...) debugSerial.print(x);

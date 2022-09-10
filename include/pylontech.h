@@ -30,6 +30,11 @@
         FirmwareInfo = 0x96,
     };
 
+    enum PylonInfoFlags{
+        UnreadAlarmValueChange = 0x01,
+        UnreadSwitchingValueChange = 0x10
+    };
+
     class Pylonframe{
         private:
             class ChecksumPrint:public Print{
@@ -61,6 +66,8 @@
                 protected:
                     String Info;
                     static String HexDecode(String data);
+                    int16_t GetInt16(unsigned int begin);
+                    uint16_t GetUInt16(unsigned int begin);
                 public:
                     PylonInfo(String info);
             };
@@ -90,6 +97,24 @@
                     uint8_t MainlineMinorVersion();
                     uint8_t MainlinePatchVersion();
                     PylonFirmwareInfo(String info);
+            };
+
+            class PylonSystemParameter:PylonInfo{
+                public:
+                    PylonInfoFlags InfoFlags();
+                    float CellHighVoltageLimit();
+                    float CellLowVoltageLimit();
+                    float CellUnderVoltageLimit();
+                    float ChargeHighTemperatureLimit();
+                    float ChargeLowTemperatureLimit();
+                    float ChargeCurrentLimit();
+                    float ModuleHighVoltageLimit();
+                    float ModuleLowVoltageLimit();
+                    float ModuleUnderVoltageLimit();
+                    float DischargeHighTemperatureLimit();
+                    float DischargeLowTemperatureLimit();
+                    float DischargeCurrentLimit();
+                    PylonSystemParameter(String info);
             };
     };
 #endif /* PYLONTECH_H */
