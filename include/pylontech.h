@@ -80,5 +80,16 @@
                     String Manufacturer();
                     PylonManufacturerInfo(String info);
             };
+
+            class PylonFirmwareInfo:PylonInfo{
+                public:
+                    uint8_t Address();
+                    uint8_t ManufactureMajorVersion();
+                    uint8_t ManufactureMinorVersion();
+                    uint8_t MainlineMajorVersion();
+                    uint8_t MainlineMinorVersion();
+                    uint8_t MainlinePatchVersion();
+                    PylonFirmwareInfo(String info);
+            };
     };
 #endif /* PYLONTECH_H */

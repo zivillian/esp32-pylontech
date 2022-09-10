@@ -150,3 +150,31 @@ uint8_t Pylonframe::PylonManufacturerInfo::SoftwareMinorVersion(){
 String Pylonframe::PylonManufacturerInfo::Manufacturer(){
     return HexDecode(Info.substring(24, 64));
 }
+
+Pylonframe::PylonFirmwareInfo::PylonFirmwareInfo(String info)
+    :PylonInfo(info)
+{}
+
+uint8_t Pylonframe::PylonFirmwareInfo::Address(){
+    return strtoul(Info.substring(0,2).c_str(), 0, HEX);
+}
+
+uint8_t Pylonframe::PylonFirmwareInfo::ManufactureMajorVersion(){
+    return strtoul(Info.substring(2,4).c_str(), 0, HEX);
+}
+
+uint8_t Pylonframe::PylonFirmwareInfo::ManufactureMinorVersion(){
+    return strtoul(Info.substring(4,6).c_str(), 0, HEX);
+}
+
+uint8_t Pylonframe::PylonFirmwareInfo::MainlineMajorVersion(){
+    return strtoul(Info.substring(6,8).c_str(), 0, HEX);
+}
+
+uint8_t Pylonframe::PylonFirmwareInfo::MainlineMinorVersion(){
+    return strtoul(Info.substring(8,10).c_str(), 0, HEX);
+}
+
+uint8_t Pylonframe::PylonFirmwareInfo::MainlinePatchVersion(){
+    return strtoul(Info.substring(10,12).c_str(), 0, HEX);
+}
