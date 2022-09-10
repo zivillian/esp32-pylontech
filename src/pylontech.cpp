@@ -130,3 +130,23 @@ uint8_t Pylonframe::PylonSerialnumber::Address(){
 String Pylonframe::PylonSerialnumber::Serialnumber(){
     return HexDecode(Info.substring(2));    
 }
+
+Pylonframe::PylonManufacturerInfo::PylonManufacturerInfo(String info)
+    :PylonInfo(info)
+{}
+
+String Pylonframe::PylonManufacturerInfo::Battery(){
+    return HexDecode(Info.substring(0, 20));
+}
+
+uint8_t Pylonframe::PylonManufacturerInfo::SoftwareMajorVersion(){
+    return strtoul(Info.substring(20,22).c_str(), 0, HEX);
+}
+
+uint8_t Pylonframe::PylonManufacturerInfo::SoftwareMinorVersion(){
+    return strtoul(Info.substring(22,24).c_str(), 0, HEX);
+}
+
+String Pylonframe::PylonManufacturerInfo::Manufacturer(){
+    return HexDecode(Info.substring(24, 64));
+}

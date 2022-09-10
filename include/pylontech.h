@@ -71,5 +71,14 @@
                     String Serialnumber();
                     PylonSerialnumber(String info);
             };
+
+            class PylonManufacturerInfo:PylonInfo{
+                public:
+                    String Battery();
+                    uint8_t SoftwareMajorVersion();
+                    uint8_t SoftwareMinorVersion();
+                    String Manufacturer();
+                    PylonManufacturerInfo(String info);
+            };
     };
 #endif /* PYLONTECH_H */
