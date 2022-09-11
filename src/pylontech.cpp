@@ -127,6 +127,10 @@ uint16_t Pylonframe::PylonInfo::GetUInt16(unsigned int begin){
     return strtoul(Info.substring(begin, begin+4).c_str(), 0, HEX);
 }
 
+uint32_t Pylonframe::PylonInfo::GetUInt24(unsigned int begin){
+    return strtoul(Info.substring(begin, begin+6).c_str(), 0, HEX);
+}
+
 Pylonframe::PylonSerialnumber::PylonSerialnumber(String info)
     :PylonInfo(info)
 {}
@@ -318,7 +322,6 @@ void Pylonframe::PylonChargeDischargeManagementInfo::print(Print *out) {
     out->printf("FullChargeRequest: %s\n", Status() & ChargeDischargeStatus::FullChargeRequest?"true":"false");
 }
 
-
 Pylonframe::PylonAlarmInfo::PylonAlarmInfo(String info)
     :PylonInfo(info)
 {}
@@ -337,6 +340,7 @@ String Pylonframe::PylonAlarmInfo::Name(AlarmFlag flag){
             return String((int)flag, HEX);
     }
 }
+
 PylonInfoFlags Pylonframe::PylonAlarmInfo::InfoFlags(){
     return (PylonInfoFlags)strtoul(Info.substring(0,2).c_str(), 0, HEX);
 }
@@ -467,5 +471,119 @@ void Pylonframe::PylonAlarmInfo::print(Print *out) {
     {
         out->printf("CellError%u: %s\n", i, cellError & 1<<i?"true":"false");
     }
-    
+}
+
+Pylonframe::PylonAnalogValue::PylonAnalogValue(String info)
+    :PylonInfo(info)
+{}
+
+PylonInfoFlags Pylonframe::PylonAnalogValue::InfoFlags(){
+    return (PylonInfoFlags)strtoul(Info.substring(0,2).c_str(), 0, HEX);
+}
+
+uint8_t Pylonframe::PylonAnalogValue::Address(){
+    return strtoul(Info.substring(2,4).c_str(), 0, HEX);
+}
+
+uint8_t Pylonframe::PylonAnalogValue::CellCount(){
+    return strtoul(Info.substring(4,6).c_str(), 0, HEX);
+}
+
+float Pylonframe::PylonAnalogValue::CellVoltage(size_t cell){
+    auto index = 2 * cell + 6;
+    return GetUInt16(index) * 0.001;
+}
+
+uint8_t Pylonframe::PylonAnalogValue::TemperatureCount(){
+    auto index = 4 * CellCount() + 6;
+    return strtoul(Info.substring(index, index + 2).c_str(), 0, HEX);
+}
+
+float Pylonframe::PylonAnalogValue::BmsTemperature(){
+    auto index = 4 * CellCount() + 8;
+    return (GetInt16(index) - 2731) * 0.1;
+}
+
+float Pylonframe::PylonAnalogValue::TemperatureCell1to4(){
+    auto index = 4 * CellCount() + 12;
+    return (GetInt16(index) - 2731) * 0.1;
+}
+
+float Pylonframe::PylonAnalogValue::TemperatureCell5to8(){
+    auto index = 4 * CellCount() + 16;
+    return (GetInt16(index) - 2731) * 0.1;
+}
+
+float Pylonframe::PylonAnalogValue::TemperatureCell9to12(){
+    auto index = 4 * CellCount() + 20;
+    return (GetInt16(index) - 2731) * 0.1;
+}
+
+float Pylonframe::PylonAnalogValue::TemperatureCell13to15(){
+    auto index = 4 * CellCount() + 24;
+    return (GetInt16(index) - 2731) * 0.1;
+}
+
+float Pylonframe::PylonAnalogValue::Current(){
+    auto index = 4 * (CellCount() + TemperatureCount()) + 8;
+    return GetInt16(index) * 0.1;
+}
+
+float Pylonframe::PylonAnalogValue::ModuleVoltage(){
+    auto index = 4 * (CellCount() + TemperatureCount()) + 12;
+    return GetUInt16(index) * 0.001;
+}
+
+float Pylonframe::PylonAnalogValue::RemainingCapacity(){
+    if (UserDefined() == 2){
+        auto index = 4 * (CellCount() + TemperatureCount()) + 16;
+        return GetUInt16(index) * 0.001;
+    }
+    else if (UserDefined() == 4){
+        auto index = 4 * (CellCount() + TemperatureCount()) + 30;
+        return GetUInt24(index) * 0.001;
+    }
+    return NAN;
+}
+
+uint8_t Pylonframe::PylonAnalogValue::UserDefined(){
+    auto index = 4 * (CellCount() + TemperatureCount()) + 20;
+    return strtoul(Info.substring(index, index + 2).c_str(), 0, HEX);
+}
+
+float Pylonframe::PylonAnalogValue::TotalCapacity(){
+    if (UserDefined() == 2){
+        auto index = 4 * (CellCount() + TemperatureCount()) + 22;
+        return GetUInt16(index) * 0.001;
+    }
+    else if (UserDefined() == 4){
+        auto index = 4 * (CellCount() + TemperatureCount()) + 36;
+        return GetUInt24(index) * 0.001;
+    }
+    return NAN;
+}
+
+uint16_t Pylonframe::PylonAnalogValue::CycleNumber(){
+    auto index = 4 * (CellCount() + TemperatureCount()) + 26;
+    return GetUInt16(index);
+}
+
+void Pylonframe::PylonAnalogValue::print(Print *out) {
+    out->printf("UnreadAlarmValueChange: %s\n", InfoFlags() & PylonInfoFlags::UnreadAlarmValueChange?"true":"false");
+    out->printf("UnreadSwitchingValueChange: %s\n", InfoFlags() & PylonInfoFlags::UnreadSwitchingValueChange?"true":"false");
+    out->printf("Address: %u\n", Address());
+    for (size_t i = 0; i < CellCount(); i++)
+    {
+        out->printf("CellVoltage%u: %.3f\n", i, CellVoltage(i));
+    }
+    out->printf("BmsTemperature: %.1f\n", BmsTemperature());
+    out->printf("TemperatureCell1to4: %.1f\n", TemperatureCell1to4());
+    out->printf("TemperatureCell5to8: %.1f\n", TemperatureCell5to8());
+    out->printf("TemperatureCell9to12: %.1f\n", TemperatureCell9to12());
+    out->printf("TemperatureCell13to15: %.1f\n", TemperatureCell13to15());
+    out->printf("Current: %.1f\n", Current());
+    out->printf("ModuleVoltage: %.3f\n", ModuleVoltage());
+    out->printf("RemainingCapacity: %.3f\n", RemainingCapacity());
+    out->printf("TotalCapacity: %.3f\n", TotalCapacity());
+    out->printf("CycleNumber: %u\n", CycleNumber());
 }

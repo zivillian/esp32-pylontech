@@ -108,6 +108,7 @@
                     static String HexDecode(String data);
                     int16_t GetInt16(unsigned int begin);
                     uint16_t GetUInt16(unsigned int begin);
+                    uint32_t GetUInt24(unsigned int begin);
                 public:
                     PylonInfo(String info);
                     virtual void print(Print *out)=0;
@@ -197,6 +198,29 @@
                     AlarmStatus3 Status3();
                     uint16_t CellError();
                     PylonAlarmInfo(String info);
+                    void print(Print *out);
+            };
+
+            class PylonAnalogValue:PylonInfo{
+                private:
+                    uint8_t UserDefined();
+                public:
+                    PylonInfoFlags InfoFlags();
+                    uint8_t Address();
+                    uint8_t CellCount();
+                    float CellVoltage(size_t cell);
+                    uint8_t TemperatureCount();
+                    float BmsTemperature();
+                    float TemperatureCell1to4();
+                    float TemperatureCell5to8();
+                    float TemperatureCell9to12();
+                    float TemperatureCell13to15();
+                    float Current();
+                    float ModuleVoltage();
+                    float RemainingCapacity();
+                    float TotalCapacity();
+                    uint16_t CycleNumber();
+                    PylonAnalogValue(String info);
                     void print(Print *out);
             };
     };

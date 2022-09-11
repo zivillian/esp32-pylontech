@@ -98,6 +98,9 @@ void setupPages(AsyncWebServer *server, WiFiManager *wm){
       case CommandInformation::AlarmInfo:
         answer = "~20024600A04200020F000000000000000000000000000000050000000000000000000E40000000F105\r";
         break;
+      case CommandInformation::AnalogValueFixedPoint:
+        answer = "~20024600F07A00020F0D0B0D0D0D0A0D0E0D0A0D0A0D0A0D0B0D0B0D0B0D0B0D0C0D0A0D0D0D0A050BBD0BAE0BAB0BAB0BAD0017C3A7FFFF04FFFF003700C394012110E21E\r";
+        break;
     }
     frame = Pylonframe(answer);
     response->print(answer);
@@ -187,6 +190,13 @@ void setupPages(AsyncWebServer *server, WiFiManager *wm){
       {
         auto alarm = Pylonframe::PylonAlarmInfo(frame.Info);
         alarm.print(response);
+        break;
+      }
+      case CommandInformation::AnalogValueFixedPoint:
+      {
+        auto analog = Pylonframe::PylonAnalogValue(frame.Info);
+        analog.print(response);
+        break;
       }
     }
     response->print("</pre>");
