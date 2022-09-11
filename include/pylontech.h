@@ -35,6 +35,46 @@
         UnreadSwitchingValueChange = 0x10
     };
 
+    enum ChargeDischargeStatus{
+        ChargeEnabled = 0x80,
+        DischargeEnabled = 0x40,
+        ChargeImmediately1 = 0x20,
+        ChargeImmediately2 = 0x10,
+        FullChargeRequest = 0x08,
+    };
+
+    enum AlarmFlag{
+        None = 0,
+        BelowLowerLimit = 0x01,
+        AboverHigherLimit = 0x02,
+        OtherError = 0xF0
+    };
+
+    enum AlarmStatus1{
+        ModuleUnderVoltage = 0x80,
+        ChargeOverTemperature = 0x40,
+        DischargeOverTemperature = 0x20,
+        DischargeOverCurrent = 0x10,
+        ChargeOverCurrent = 0x04,
+        CellUnderVoltage = 0x02,
+        ModuleOverVoltage = 0x01
+    };
+
+    enum AlarmStatus2{
+        UsingBatteryModulePower = 0x08,
+        DischargeMosfet = 0x04,
+        ChargeMosfet = 0x02,
+        PreMosfet = 0x01
+    };
+
+    enum AlarmStatus3{
+        EffectiveChargeCurrent = 0x80,
+        EffectiveDischargeCurrent = 0x40,
+        Heater = 0x20,
+        FullyCharged = 0x08,
+        Buzzer = 0x01
+    };
+
     class Pylonframe{
         private:
             class ChecksumPrint:public Print{
@@ -119,6 +159,44 @@
                     float DischargeLowTemperatureLimit();
                     float DischargeCurrentLimit();
                     PylonSystemParameter(String info);
+                    void print(Print *out);
+            };
+
+            class PylonChargeDischargeManagementInfo:PylonInfo{
+                public:
+                    uint8_t Address();
+                    float ChargeVoltageLimit();
+                    float DischargeVoltageLimit();
+                    float ChargeCurrentLimit();
+                    float DischargeCurrentLimit();
+                    ChargeDischargeStatus Status();
+                    PylonChargeDischargeManagementInfo(String info);
+                    void print(Print *out);
+            };
+
+            class PylonAlarmInfo:PylonInfo{
+                private:
+                    String Name(AlarmFlag flag);
+                public:
+                    PylonInfoFlags InfoFlags();
+                    uint8_t Address();
+                    uint8_t CellCount();
+                    AlarmFlag CellVoltage(size_t cell);
+                    uint8_t TemperatureCount();
+                    AlarmFlag BmsTemperature();
+                    AlarmFlag TemperatureCell1to4();
+                    AlarmFlag TemperatureCell5to8();
+                    AlarmFlag TemperatureCell9to12();
+                    AlarmFlag TemperatureCell13to15();
+                    AlarmFlag MosfetTemperature();
+                    AlarmFlag ChargeCurrent();
+                    AlarmFlag ModuleVoltage();
+                    AlarmFlag DischargeCurrent();
+                    AlarmStatus1 Status1();
+                    AlarmStatus2 Status2();
+                    AlarmStatus3 Status3();
+                    uint16_t CellError();
+                    PylonAlarmInfo(String info);
                     void print(Print *out);
             };
     };

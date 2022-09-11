@@ -95,6 +95,9 @@ void setupPages(AsyncWebServer *server, WiFiManager *wm){
       case CommandInformation::GetChargeDischargeManagementInfo:
         answer = "~20024600B01402D002AFC80172FE8EC0F91C\r";
         break;
+      case CommandInformation::AlarmInfo:
+        answer = "~20024600A04200020F000000000000000000000000000000050000000000000000000E40000000F105\r";
+        break;
     }
     frame = Pylonframe(answer);
     response->print(answer);
@@ -173,6 +176,17 @@ void setupPages(AsyncWebServer *server, WiFiManager *wm){
         auto system = Pylonframe::PylonSystemParameter(frame.Info);
         system.print(response);
         break;
+      }
+      case CommandInformation::GetChargeDischargeManagementInfo:
+      {
+        auto charge = Pylonframe::PylonChargeDischargeManagementInfo(frame.Info);
+        charge.print(response);
+        break;
+      }
+      case CommandInformation::AlarmInfo:
+      {
+        auto alarm = Pylonframe::PylonAlarmInfo(frame.Info);
+        alarm.print(response);
       }
     }
     response->print("</pre>");
