@@ -57,14 +57,6 @@ void setupPages(AsyncWebServer *server, WiFiManager *wm, Config *config, Pyloncl
         "</tr>"
         "<tr>"
           "<td>"
-          "<label for=\"p\">MQTT port</label>"
-        "</td>"
-        "<td>");
-    response->printf("<input type=\"number\" min=\"1\" max=\"65535\" id=\"p\" name=\"p\" value=\"%d\">", config->getMqttPort());
-    response->print("</td>"
-        "</tr>"
-        "<tr>"
-          "<td>"
           "<label for=\"h\">MQTT host</label>"
         "</td>"
         "<td>");
@@ -87,6 +79,22 @@ void setupPages(AsyncWebServer *server, WiFiManager *wm, Config *config, Pyloncl
     response->printf("<input type=\"text\" id=\"pr\" name=\"pr\" value=\"%s\">", config->getMqttPrefix().c_str());
     response->print("</td>"
           "</tr>"
+        "<tr>"
+          "<td>"
+          "<label for=\"u\">MQTT username</label>"
+        "</td>"
+        "<td>");
+    response->printf("<input type=\"text\" id=\"u\" name=\"u\" value=\"%s\">", config->getMqttUsername().c_str());
+    response->print("</td>"
+      "</tr>"
+        "<tr>"
+          "<td>"
+          "<label for=\"pa\">MQTT password</label>"
+        "</td>"
+        "<td>");
+    response->printf("<input type=\"password\" id=\"pa\" name=\"pa\" value=\"%s\">", config->getMqttPassword().c_str());
+    response->print("</td>"
+      "</tr>"
         "</table>");
     response->print("<button class=\"r\">Save</button>"
       "</form>"
@@ -128,6 +136,16 @@ void setupPages(AsyncWebServer *server, WiFiManager *wm, Config *config, Pyloncl
       auto prefix = request->getParam("pr", true)->value();
       config->setMqttPrefix(prefix);
       dbgln("[webserver] saved mqtt prefix");
+    }
+    if (request->hasParam("u", true)){
+      auto username = request->getParam("u", true)->value();
+      config->setMqttUsername(username);
+      dbgln("[webserver] saved mqtt username");
+    }
+    if (request->hasParam("pa", true)){
+      auto password = request->getParam("pa", true)->value();
+      config->setMqttPassword(password);
+      dbgln("[webserver] saved mqtt password");
     }
     request->redirect("/");    
   });
