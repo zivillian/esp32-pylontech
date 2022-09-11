@@ -9,10 +9,23 @@
     class Config{
         private:
             Preferences *_prefs;
+            uint8_t _modules;
             uint32_t _interval;
+            String _mqttHost;
+            uint16_t _mqttPort;
+            String _mqttPrefix;
+
         public:
+            uint8_t getModuleCount();
+            void setModuleCount(uint8_t value);
             uint32_t getInterval();
             void setInterval(uint32_t value);
+            String getMqttHost();
+            void setMqttHost(String value);
+            uint16_t getMqttPort();
+            void setMqttPort(uint16_t value);
+            String getMqttPrefix();
+            void setMqttPrefix(String value);
             Config();
             void begin(Preferences *prefs);
     };

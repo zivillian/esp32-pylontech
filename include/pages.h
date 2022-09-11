@@ -2,11 +2,12 @@
     #define PAGES_H
     #include <WiFiManager.h>
     #include <ESPAsyncWebServer.h>
+    #include <AsyncMqttClient.h>
     #include <Update.h>
     #include "config.h"
     #include "pylontech.h"
 
-    void setupPages(AsyncWebServer *server, WiFiManager *wm, Pylonclient *client);
+    void setupPages(AsyncWebServer *server, WiFiManager *wm, Config *config, Pylonclient *client, AsyncMqttClient *mqtt);
     void sendResponseHeader(AsyncResponseStream *response, const char *title);
     void sendResponseTrailer(AsyncResponseStream *response);
     void sendButton(AsyncResponseStream *response, const char *title, const char *action, const char *css = "");

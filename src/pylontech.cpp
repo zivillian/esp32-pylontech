@@ -37,8 +37,12 @@ Pylonframe::Pylonframe()
 {}
 
 Pylonframe::Pylonframe(uint8_t address, CommandInformation cid2)
-    :MajorVersion(0)
-    ,MinorVersion(0)
+    :Pylonframe(0, 0, address, cid2)
+{}
+
+Pylonframe::Pylonframe(uint8_t major, uint8_t minor, uint8_t address, CommandInformation cid2)
+    :MajorVersion(major)
+    ,MinorVersion(minor)
     ,Address(address)
     ,Cid1(ControlIdentifyCode::Default)
     ,Cid2(cid2)
@@ -243,6 +247,12 @@ void Pylonframe::PylonSerialnumber::print(Print *out){
     out->printf("Serialnumber: %s\n", Serialnumber().c_str());
 }
 
+void Pylonframe::PylonSerialnumber::publish(PublishFunction callback){
+    if (callback){
+        callback("serialnumber", Serialnumber());
+    }
+}
+
 Pylonframe::PylonManufacturerInfo::PylonManufacturerInfo(String info)
     :PylonInfo(info)
 {}
@@ -267,6 +277,14 @@ void Pylonframe::PylonManufacturerInfo::print(Print *out){
     out->printf("Battery: %s\n", Battery().c_str());
     out->printf("SoftwareVersion: %u.%u\n", SoftwareMajorVersion(), SoftwareMinorVersion());
     out->printf("Manufacturer: %s\n", Manufacturer().c_str());
+}
+
+void Pylonframe::PylonManufacturerInfo::publish(PublishFunction callback){
+    if (callback){
+        callback("manufacturer/battery", Battery());
+        callback("manufacturer/softwareVersion", String(SoftwareMajorVersion()) + "." + String(SoftwareMinorVersion()));
+        callback("manufacturer/manufacturer", Manufacturer());
+    }
 }
 
 Pylonframe::PylonFirmwareInfo::PylonFirmwareInfo(String info)
@@ -301,6 +319,13 @@ void Pylonframe::PylonFirmwareInfo::print(Print *out){
     out->printf("Address: %u\n", Address());
     out->printf("ManufactureVersion: %u.%u\n", ManufactureMajorVersion(), ManufactureMinorVersion());
     out->printf("MainlineVersion: %u.%u.%u\n", MainlineMajorVersion(), MainlineMinorVersion(), MainlinePatchVersion());
+}
+
+void Pylonframe::PylonFirmwareInfo::publish(PublishFunction callback){
+    if (callback){
+        callback("firmware/manufactureVersion", String(ManufactureMajorVersion()) + "." + String(ManufactureMinorVersion()));
+        callback("firmware/mainlineVersion", String(MainlineMajorVersion()) + "." + String(MainlineMinorVersion()) + "." + String(MainlinePatchVersion()));
+    }
 }
 
 Pylonframe::PylonSystemParameter::PylonSystemParameter(String info)
@@ -376,6 +401,14 @@ void Pylonframe::PylonSystemParameter::print(Print *out) {
     out->printf("DischargeCurrentLimit: %.3f\n", DischargeCurrentLimit());   
 }
 
+void Pylonframe::PylonSystemParameter::publish(PublishFunction callback){
+    if (callback){
+        callback("system/unreadAlarmValueChange", InfoFlags() & PylonInfoFlags::UnreadAlarmValueChange?"true":"false");
+        callback("system/unreadSwitchingValueChange", InfoFlags() & PylonInfoFlags::UnreadSwitchingValueChange?"true":"false");
+        //todo
+    }
+}
+
 Pylonframe::PylonChargeDischargeManagementInfo::PylonChargeDischargeManagementInfo(String info)
     :PylonInfo(info)
 {}
@@ -415,6 +448,12 @@ void Pylonframe::PylonChargeDischargeManagementInfo::print(Print *out) {
     out->printf("ChargeImmediately1: %s\n", Status() & ChargeDischargeStatus::ChargeImmediately1?"true":"false");
     out->printf("ChargeImmediately2: %s\n", Status() & ChargeDischargeStatus::ChargeImmediately2?"true":"false");
     out->printf("FullChargeRequest: %s\n", Status() & ChargeDischargeStatus::FullChargeRequest?"true":"false");
+}
+
+void Pylonframe::PylonChargeDischargeManagementInfo::publish(PublishFunction callback){
+    if (callback){
+        //todo
+    }
 }
 
 Pylonframe::PylonAlarmInfo::PylonAlarmInfo(String info)
@@ -568,6 +607,12 @@ void Pylonframe::PylonAlarmInfo::print(Print *out) {
     }
 }
 
+void Pylonframe::PylonAlarmInfo::publish(PublishFunction callback){
+    if (callback){
+        //todo
+    }
+}
+
 Pylonframe::PylonAnalogValue::PylonAnalogValue(String info)
     :PylonInfo(info)
 {}
@@ -681,4 +726,10 @@ void Pylonframe::PylonAnalogValue::print(Print *out) {
     out->printf("RemainingCapacity: %.3f\n", RemainingCapacity());
     out->printf("TotalCapacity: %.3f\n", TotalCapacity());
     out->printf("CycleNumber: %u\n", CycleNumber());
+}
+
+void Pylonframe::PylonAnalogValue::publish(PublishFunction callback){
+    if (callback){
+        //todo
+    }
 }

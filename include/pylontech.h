@@ -1,6 +1,7 @@
 #ifndef PYLONTECH_H
     #define PYLONTECH_H
     #include <Arduino.h>
+    typedef std::function<void(String name, String value)> PublishFunction;
 
     enum ControlIdentifyCode {
          Default = 0x46
@@ -102,6 +103,7 @@
             bool HasError;
             Pylonframe();
             Pylonframe(uint8_t address, CommandInformation cid2);
+            Pylonframe(uint8_t major, uint8_t minor, uint8_t address, CommandInformation cid2);
             Pylonframe(String data);
             void WriteTo(Print *target);
             uint16_t CalculateChecksum(String data);
@@ -117,6 +119,7 @@
                 public:
                     PylonInfo(String info);
                     virtual void print(Print *out)=0;
+                    virtual void publish(PublishFunction callback) = 0;
             };
 
             class PylonSerialnumber:PylonInfo{
@@ -125,6 +128,7 @@
                     String Serialnumber();
                     PylonSerialnumber(String info);
                     void print(Print *out);
+                    void publish(PublishFunction callback);
             };
 
             class PylonManufacturerInfo:PylonInfo{
@@ -135,6 +139,7 @@
                     String Manufacturer();
                     PylonManufacturerInfo(String info);
                     void print(Print *out);
+                    void publish(PublishFunction callback);
             };
 
             class PylonFirmwareInfo:PylonInfo{
@@ -147,6 +152,7 @@
                     uint8_t MainlinePatchVersion();
                     PylonFirmwareInfo(String info);
                     void print(Print *out);
+                    void publish(PublishFunction callback);
             };
 
             class PylonSystemParameter:PylonInfo{
@@ -166,6 +172,7 @@
                     float DischargeCurrentLimit();
                     PylonSystemParameter(String info);
                     void print(Print *out);
+                    void publish(PublishFunction callback);
             };
 
             class PylonChargeDischargeManagementInfo:PylonInfo{
@@ -178,6 +185,7 @@
                     ChargeDischargeStatus Status();
                     PylonChargeDischargeManagementInfo(String info);
                     void print(Print *out);
+                    void publish(PublishFunction callback);
             };
 
             class PylonAlarmInfo:PylonInfo{
@@ -204,6 +212,7 @@
                     uint16_t CellError();
                     PylonAlarmInfo(String info);
                     void print(Print *out);
+                    void publish(PublishFunction callback);
             };
 
             class PylonAnalogValue:PylonInfo{
@@ -227,6 +236,7 @@
                     uint16_t CycleNumber();
                     PylonAnalogValue(String info);
                     void print(Print *out);
+                    void publish(PublishFunction callback);
             };
     };
 

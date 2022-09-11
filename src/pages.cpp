@@ -1,6 +1,6 @@
 #include "pages.h"
 
-void setupPages(AsyncWebServer *server, WiFiManager *wm, Pylonclient *client){
+void setupPages(AsyncWebServer *server, WiFiManager *wm, Config *config, Pylonclient *client, AsyncMqttClient *mqtt){
   server->on("/", HTTP_GET, [](AsyncWebServerRequest *request){
     dbgln("[webserver] GET /");
     auto *response = request->beginResponseStream("text/html");
@@ -25,12 +25,111 @@ void setupPages(AsyncWebServer *server, WiFiManager *wm, Pylonclient *client){
     sendResponseTrailer(response);
     request->send(response);
   });
-  server->on("/reboot", HTTP_POST, [](AsyncWebServerRequest *request){
+  server->on("/reboot", HTTP_POST, [mqtt](AsyncWebServerRequest *request){
     dbgln("[webserver] POST /reboot");
     request->redirect("/");
     dbgln("[webserver] rebooting...")
+    mqtt->disconnect();
     ESP.restart();
     dbgln("[webserver] rebooted...")
+  });
+  server->on("/config", HTTP_GET, [config](AsyncWebServerRequest *request){
+    dbgln("[webserver] GET /config");
+    auto *response = request->beginResponseStream("text/html");
+    sendResponseHeader(response, "Config");
+    response->print("<form method=\"post\">");
+    response->print("<table>"
+      "<tr>"
+        "<td>"
+          "<label for=\"i\">Polling interval (ms)</label>"
+        "</td>"
+        "<td>");
+    response->printf("<input type=\"number\" min=\"1\" id=\"i\" name=\"i\" value=\"%u\">", config->getInterval());
+    response->print("</td>"
+        "</tr>"
+        "<tr>"
+          "<td>"
+          "<label for=\"c\">Nr of modules</label>"
+        "</td>"
+        "<td>");
+    response->printf("<input type=\"number\" min=\"1\" max=\"12\" id=\"c\" name=\"c\" value=\"%u\">", config->getModuleCount());
+    response->print("</td>"
+        "</tr>"
+        "<tr>"
+          "<td>"
+          "<label for=\"p\">MQTT port</label>"
+        "</td>"
+        "<td>");
+    response->printf("<input type=\"number\" min=\"1\" max=\"65535\" id=\"p\" name=\"p\" value=\"%d\">", config->getMqttPort());
+    response->print("</td>"
+        "</tr>"
+        "<tr>"
+          "<td>"
+          "<label for=\"h\">MQTT host</label>"
+        "</td>"
+        "<td>");
+    response->printf("<input type=\"text\" id=\"h\" name=\"h\" value=\"%s\">", config->getMqttHost().c_str());
+    response->print("</td>"
+      "</tr>"
+      "<tr>"
+        "<td>"
+          "<label for=\"p\">MQTT port</label>"
+        "</td>"
+        "<td>");
+    response->printf("<input type=\"number\" min=\"1\" max=\"65535\" id=\"p\" name=\"p\" value=\"%d\">", config->getMqttPort());
+    response->print("</td>"
+        "</tr>"
+        "<tr>"
+          "<td>"
+            "<label for=\"pr\">MQTT prefix</label>"
+          "</td>"
+          "<td>");
+    response->printf("<input type=\"text\" id=\"pr\" name=\"pr\" value=\"%s\">", config->getMqttPrefix().c_str());
+    response->print("</td>"
+          "</tr>"
+        "</table>");
+    response->print("<button class=\"r\">Save</button>"
+      "</form>"
+      "<p></p>");
+    sendButton(response, "Back", "/");
+    // response->print("<script>"
+    //   "(function(){"
+    //     "var s = document.querySelectorAll('select[data-value]');"
+    //     "for(d of s){"
+    //       "d.querySelector(`option[value='${d.dataset.value}']`).selected=true"
+    //   "}})();"
+    //   "</script>");
+    sendResponseTrailer(response);
+    request->send(response);
+  });
+  server->on("/config", HTTP_POST, [config](AsyncWebServerRequest *request){
+    dbgln("[webserver] POST /config");
+    if (request->hasParam("c", true)){
+      auto nr = request->getParam("c", true)->value().toInt();
+      config->setModuleCount(nr);
+      dbgln("[webserver] saved number of modules");
+    }
+    if (request->hasParam("i", true)){
+      auto interval = request->getParam("i", true)->value().toInt();
+      config->setInterval(interval);
+      dbgln("[webserver] saved interval");
+    }
+    if (request->hasParam("h", true)){
+      auto host = request->getParam("h", true)->value();
+      config->setMqttHost(host);
+      dbgln("[webserver] saved mqtt host");
+    }
+    if (request->hasParam("p", true)){
+      auto port = request->getParam("p", true)->value().toInt();
+      config->setMqttPort(port);
+      dbgln("[webserver] saved mqtt port");
+    }
+    if (request->hasParam("pr", true)){
+      auto prefix = request->getParam("pr", true)->value();
+      config->setMqttPrefix(prefix);
+      dbgln("[webserver] saved mqtt prefix");
+    }
+    request->redirect("/");    
   });
   server->on("/debug", HTTP_GET, [](AsyncWebServerRequest *request){
     dbgln("[webserver] GET /debug");
