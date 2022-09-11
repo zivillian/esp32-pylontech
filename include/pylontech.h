@@ -28,6 +28,9 @@
         SetChargeDischargeManagementInfo = 0x94,
         Turnoff = 0x95,
         FirmwareInfo = 0x96,
+        //internal
+        NoReponse = 0xfd,
+        Timeout = 0xfe,
     };
 
     enum PylonInfoFlags{
@@ -98,9 +101,11 @@
             String Info;
             bool HasError;
             Pylonframe();
+            Pylonframe(uint8_t address, CommandInformation cid2);
             Pylonframe(String data);
             void WriteTo(Print *target);
             uint16_t CalculateChecksum(String data);
+            void print(Print *out);
 
             class PylonInfo{
                 protected:
@@ -223,5 +228,14 @@
                     PylonAnalogValue(String info);
                     void print(Print *out);
             };
+    };
+
+    class Pylonclient{
+        private:
+            HardwareSerial *_serial;
+            SemaphoreHandle_t _serialLock;
+        public:
+            void Begin(HardwareSerial *serial);
+            Pylonframe SendCommand(Pylonframe request);
     };
 #endif /* PYLONTECH_H */

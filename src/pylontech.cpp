@@ -1,7 +1,47 @@
 #include "pylontech.h"
 
+void Pylonclient::Begin(HardwareSerial *serial)
+{
+    _serial = serial;
+    _serialLock = xSemaphoreCreateBinary();
+    _serial->begin(115200, SERIAL_8N1);
+    xSemaphoreGive(_serialLock);
+}
+
+Pylonframe Pylonclient::SendCommand(Pylonframe request){
+  if (!xSemaphoreTake(_serialLock, 1000)){
+    auto result = Pylonframe();
+    result.HasError = true;
+    result.Cid2 = CommandInformation::Timeout;
+    return result;
+  }
+  //clear serial buffer
+  while (_serial->available())
+  {
+    _serial->read();
+  }  
+  request.WriteTo(_serial);
+  auto response = _serial->readStringUntil('\r');
+  xSemaphoreGive(_serialLock);
+  if (response.length() == 0){
+    auto result = Pylonframe();
+    result.HasError = true;
+    result.Cid2 = CommandInformation::NoReponse;
+    return result;
+  }
+  return Pylonframe(response + '\r');
+}
+
 Pylonframe::Pylonframe()
-    :Cid1(ControlIdentifyCode::Default)
+    :Pylonframe(2, CommandInformation::Normal)
+{}
+
+Pylonframe::Pylonframe(uint8_t address, CommandInformation cid2)
+    :MajorVersion(0)
+    ,MinorVersion(0)
+    ,Address(address)
+    ,Cid1(ControlIdentifyCode::Default)
+    ,Cid2(cid2)
     ,Info("")
     ,HasError(false)
 {}
@@ -57,9 +97,11 @@ void Pylonframe::WriteTo(Print *target){
         case CommandInformation::Serialnumber:
         case CommandInformation::GetChargeDischargeManagementInfo:
         case CommandInformation::AnalogValueFixedPoint:
+        case CommandInformation::AlarmInfo:
             //payload is the address with length two (according to the spec)
-            output.print(Lchecksum(2));
+            output.print(Lchecksum(2), HEX);
             output.print("002");
+            output.printf("%02X", Address);
             break;
         default:
             //otherwise it's an empty payload
@@ -77,6 +119,59 @@ uint16_t Pylonframe::CalculateChecksum(String data){
         result += data[i];
     }
     return ChecksumPrint::Final(result);
+}
+
+void Pylonframe::print(Print *out) {
+    out->printf("Version: %u.%u\n", MajorVersion, MinorVersion);
+    out->printf("Address: %u\n", Address);
+    switch(Cid1){
+      case ControlIdentifyCode::Default:
+        out->print("CID1: battery data\n");
+        break;
+      default:
+        out->printf("CID1: %02X\n", Cid1);
+        break;
+    }
+    switch (Cid2)
+    {
+      case CommandInformation::Normal:
+        out->print("CID2: Normal\n");
+        break;
+      case CommandInformation::VersionError:
+        out->print("CID2: VER error\n");
+        break;
+      case CommandInformation::ChecksumError:
+        out->print("CID2: CHKSUM error\n");
+        break;
+      case CommandInformation::LChecksumError:
+        out->print("CID2: LCHKSUM error\n");
+        break;
+      case CommandInformation::InvalidCid2:
+        out->print("CID2: CID2 invalid\n");
+        break;
+      case CommandInformation::CommandFormatError:
+        out->print("CID2: Command format error\n");
+        break;
+      case CommandInformation::InvalidData:
+        out->print("CID2: Invalid data\n");
+        break;
+      case CommandInformation::AdrError:
+        out->print("CID2: ADR error\n");
+        break;
+      case CommandInformation::CommunicationError:
+        out->print("CID2: Communication error\n");
+        break;
+      case CommandInformation::NoReponse:
+        out->print("No response received\n");
+        break;
+      case CommandInformation::Timeout:
+        out->print("Timeout trying to lock the serial port\n");
+        break;
+      default:
+        out->printf("CID2: %02X\n", Cid2);
+        break;
+    }
+    out->printf("Info: %s\n", Info.c_str());
 }
 
 uint8_t Pylonframe::Lchecksum(uint16_t length){
@@ -490,7 +585,7 @@ uint8_t Pylonframe::PylonAnalogValue::CellCount(){
 }
 
 float Pylonframe::PylonAnalogValue::CellVoltage(size_t cell){
-    auto index = 2 * cell + 6;
+    auto index = 4 * cell + 6;
     return GetUInt16(index) * 0.001;
 }
 

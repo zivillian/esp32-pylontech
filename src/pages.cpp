@@ -1,7 +1,6 @@
 #include "pages.h"
-#include "pylontech.h"
 
-void setupPages(AsyncWebServer *server, WiFiManager *wm){
+void setupPages(AsyncWebServer *server, WiFiManager *wm, Pylonclient *client){
   server->on("/", HTTP_GET, [](AsyncWebServerRequest *request){
     dbgln("[webserver] GET /");
     auto *response = request->beginResponseStream("text/html");
@@ -42,7 +41,7 @@ void setupPages(AsyncWebServer *server, WiFiManager *wm){
     sendResponseTrailer(response);
     request->send(response);
   });
-  server->on("/debug", HTTP_POST, [](AsyncWebServerRequest *request){
+  server->on("/debug", HTTP_POST, [client](AsyncWebServerRequest *request){
     dbgln("[webserver] POST /debug");
     String major = "2";
     if (request->hasParam("v1", true)){
@@ -75,86 +74,12 @@ void setupPages(AsyncWebServer *server, WiFiManager *wm){
     response->print("<pre>&gt;&nbsp;");
     frame.WriteTo(response);
     response->print("<br/>&lt;&nbsp;");
-    String answer;
-    switch(frame.Cid2){
-      case CommandInformation::ProtocolVersion:
-        answer = "~200246000000FDB2\r";
-        break;
-      case CommandInformation::Serialnumber:
-        answer = "~20024600C0220248323232303033433332323230343539F6D8\r";
-        break;
-      case CommandInformation::ManufacturerInfo:
-        answer = "~20024600C04055533330303043000000010350796C6F6E2D2D2D2D2D2D2D2D2D2D2D2D2D2D2DEFC0\r";
-        break;
-      case CommandInformation::FirmwareInfo:
-        answer = "~20024600400C020103000609FB46\r";
-        break;
-      case CommandInformation::SystemParameterFixedPoint:
-        answer = "~20024600B032100E420BEA0AF00D030A470384D2F0B3B0A7F80D030A47FC7CF27F\r";
-        break;
-      case CommandInformation::GetChargeDischargeManagementInfo:
-        answer = "~20024600B01402D002AFC80172FE8EC0F91C\r";
-        break;
-      case CommandInformation::AlarmInfo:
-        answer = "~20024600A04200020F000000000000000000000000000000050000000000000000000E40000000F105\r";
-        break;
-      case CommandInformation::AnalogValueFixedPoint:
-        answer = "~20024600F07A00020F0D0B0D0D0D0A0D0E0D0A0D0A0D0A0D0B0D0B0D0B0D0B0D0C0D0A0D0D0D0A050BBD0BAE0BAB0BAB0BAD0017C3A7FFFF04FFFF003700C394012110E21E\r";
-        break;
-    }
-    frame = Pylonframe(answer);
-    response->print(answer);
-    response->printf("<br/>Version: %u.%u<br/>", frame.MajorVersion, frame.MinorVersion);
-    response->printf("Address: %u<br/>", frame.Address);
-    String cid1;
-    switch(frame.Cid1){
-      case ControlIdentifyCode::Default:
-        cid1 = "battery data";
-        break;
-      default:
-        cid1 = printf("%02X", frame.Cid1);
-        break;
-    }
-    response->printf("CID1: %s<br/>", cid1);
-    String rcid2;
-    switch (frame.Cid2)
-    {
-      case CommandInformation::Normal:
-        rcid2 = "Normal";
-        break;
-      case CommandInformation::VersionError:
-        rcid2 = "VER error";
-        break;
-      case CommandInformation::ChecksumError:
-        rcid2 = "CHKSUM error";
-        break;
-      case CommandInformation::LChecksumError:
-        rcid2 = "LCHKSUM error";
-        break;
-      case CommandInformation::InvalidCid2:
-        rcid2 = "CID2 invalid";
-        break;
-      case CommandInformation::CommandFormatError:
-        rcid2 = "Command format error";
-        break;
-      case CommandInformation::InvalidData:
-        rcid2 = "Invalid data";
-        break;
-      case CommandInformation::AdrError:
-        rcid2 = "ADR error";
-        break;
-      case CommandInformation::CommunicationError:
-        rcid2 = "Communication error";
-        break;      
-      default:
-        rcid2 = printf("%02X", frame.Cid2);
-        break;
-    }
-    response->printf("CID2: %s<br/>", rcid2);
-    response->printf("Info: %s<br/><br/>", frame.Info.c_str());
+    frame = client->SendCommand(frame);
+    frame.print(response);
     if (frame.HasError){
-      response->printf("Something went wrong - unable to parse response<br/><br/>", rcid2);
-    }    
+      response->print("<br/>Something went wrong - unable to parse response<br/><br/>");
+    }
+   
     switch(type){
       case CommandInformation::Serialnumber:
       {

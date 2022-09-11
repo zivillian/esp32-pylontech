@@ -4,8 +4,9 @@
     #include <ESPAsyncWebServer.h>
     #include <Update.h>
     #include "config.h"
+    #include "pylontech.h"
 
-    void setupPages(AsyncWebServer *server, WiFiManager *wm);
+    void setupPages(AsyncWebServer *server, WiFiManager *wm, Pylonclient *client);
     void sendResponseHeader(AsyncResponseStream *response, const char *title);
     void sendResponseTrailer(AsyncResponseStream *response);
     void sendButton(AsyncResponseStream *response, const char *title, const char *action, const char *css = "");
