@@ -67,14 +67,35 @@ void setupPages(AsyncWebServer *server, WiFiManager *wm){
     Pylonframe frame = Pylonframe();
     frame.MajorVersion = major.toInt();
     frame.MinorVersion = minor.toInt();
-    frame.Address = strtoul(address.c_str(), 0, 16);
-    frame.Cid2 = (CommandInformation)strtoul(cid2.c_str(), 0, 16);
+    frame.Address = strtoul(address.c_str(), 0, HEX);
+    frame.Cid2 = (CommandInformation)strtoul(cid2.c_str(), 0, HEX);
+    auto type = frame.Cid2;
     auto *response = request->beginResponseStream("text/html");
     sendResponseHeader(response, "Debug");
     response->print("<pre>&gt;&nbsp;");
     frame.WriteTo(response);
     response->print("<br/>&lt;&nbsp;");
-    String answer = "~200246000000FDB2\r";
+    String answer;
+    switch(frame.Cid2){
+      case CommandInformation::ProtocolVersion:
+        answer = "~200246000000FDB2\r";
+        break;
+      case CommandInformation::Serialnumber:
+        answer = "~20024600C0220248323232303033433332323230343539F6D8\r";
+        break;
+      case CommandInformation::ManufacturerInfo:
+        answer = "~20024600C04055533330303043000000010350796C6F6E2D2D2D2D2D2D2D2D2D2D2D2D2D2D2DEFC0\r";
+        break;
+      case CommandInformation::FirmwareInfo:
+        answer = "~20024600400C020103000609FB46\r";
+        break;
+      case CommandInformation::SystemParameterFixedPoint:
+        answer = "~20024600B032100E420BEA0AF00D030A470384D2F0B3B0A7F80D030A47FC7CF27F\r";
+        break;
+      case CommandInformation::GetChargeDischargeManagementInfo:
+        answer = "~20024600B01402D002AFC80172FE8EC0F91C\r";
+        break;
+    }
     frame = Pylonframe(answer);
     response->print(answer);
     response->printf("<br/>Version: %u.%u<br/>", frame.MajorVersion, frame.MinorVersion);
@@ -124,9 +145,35 @@ void setupPages(AsyncWebServer *server, WiFiManager *wm){
         break;
     }
     response->printf("CID2: %s<br/>", rcid2);
-    response->printf("Info: %s<br/>", frame.Info);
+    response->printf("Info: %s<br/><br/>", frame.Info.c_str());
     if (frame.HasError){
-      response->printf("<br/>Something went wrong - unable to parse response<br/>", rcid2);
+      response->printf("Something went wrong - unable to parse response<br/><br/>", rcid2);
+    }    
+    switch(type){
+      case CommandInformation::Serialnumber:
+      {
+        auto serialnumber = Pylonframe::PylonSerialnumber(frame.Info);
+        serialnumber.print(response);
+        break;
+      }
+      case CommandInformation::ManufacturerInfo:
+      {
+        auto manufacturer = Pylonframe::PylonManufacturerInfo(frame.Info);
+        manufacturer.print(response);
+        break;
+      }
+      case CommandInformation::FirmwareInfo:
+      {
+        auto firmware = Pylonframe::PylonFirmwareInfo(frame.Info);
+        firmware.print(response);
+        break;
+      }
+      case CommandInformation::SystemParameterFixedPoint:
+      {
+        auto system = Pylonframe::PylonSystemParameter(frame.Info);
+        system.print(response);
+        break;
+      }
     }
     response->print("</pre>");
     sendDebugForm(response, major, minor, address, cid2, info);

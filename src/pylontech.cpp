@@ -139,6 +139,11 @@ String Pylonframe::PylonSerialnumber::Serialnumber(){
     return HexDecode(Info.substring(2));    
 }
 
+void Pylonframe::PylonSerialnumber::print(Print *out){
+    out->printf("Address: %u\n", Address());
+    out->printf("Serialnumber: %s\n", Serialnumber().c_str());
+}
+
 Pylonframe::PylonManufacturerInfo::PylonManufacturerInfo(String info)
     :PylonInfo(info)
 {}
@@ -157,6 +162,12 @@ uint8_t Pylonframe::PylonManufacturerInfo::SoftwareMinorVersion(){
 
 String Pylonframe::PylonManufacturerInfo::Manufacturer(){
     return HexDecode(Info.substring(24, 64));
+}
+
+void Pylonframe::PylonManufacturerInfo::print(Print *out){
+    out->printf("Battery: %s\n", Battery().c_str());
+    out->printf("SoftwareVersion: %u.%u\n", SoftwareMajorVersion(), SoftwareMinorVersion());
+    out->printf("Manufacturer: %s\n", Manufacturer().c_str());
 }
 
 Pylonframe::PylonFirmwareInfo::PylonFirmwareInfo(String info)
@@ -185,6 +196,12 @@ uint8_t Pylonframe::PylonFirmwareInfo::MainlineMinorVersion(){
 
 uint8_t Pylonframe::PylonFirmwareInfo::MainlinePatchVersion(){
     return strtoul(Info.substring(10,12).c_str(), 0, HEX);
+}
+
+void Pylonframe::PylonFirmwareInfo::print(Print *out){
+    out->printf("Address: %u\n", Address());
+    out->printf("ManufactureVersion: %u.%u\n", ManufactureMajorVersion(), ManufactureMinorVersion());
+    out->printf("MainlineVersion: %u.%u.%u\n", MainlineMajorVersion(), MainlineMinorVersion(), MainlinePatchVersion());
 }
 
 Pylonframe::PylonSystemParameter::PylonSystemParameter(String info)
@@ -241,4 +258,20 @@ float Pylonframe::PylonSystemParameter::DischargeLowTemperatureLimit(){
 
 float Pylonframe::PylonSystemParameter::DischargeCurrentLimit(){
     return GetInt16(46) * 0.01;
+}
+
+void Pylonframe::PylonSystemParameter::print(Print *out) {
+    out->printf("CellHighVoltageLimit: %.3f\n", CellHighVoltageLimit());
+    out->printf("CellLowVoltageLimit: %.3f\n", CellLowVoltageLimit());
+    out->printf("CellUnderVoltageLimit: %.3f\n", CellUnderVoltageLimit());
+    out->printf("ChargeHighTemperatureLimit: %.1f\n", ChargeHighTemperatureLimit());
+    out->printf("ChargeLowTemperatureLimit: %.1f\n", ChargeLowTemperatureLimit());
+    out->printf("ChargeCurrentLimit: %.3f\n", ChargeCurrentLimit());
+    out->printf("ModuleHighVoltageLimit: %.3f\n", ModuleHighVoltageLimit());
+    out->printf("ModuleLowVoltageLimit: %.3f\n", ModuleLowVoltageLimit());
+    out->printf("ModuleUnderVoltageLimit: %.3f\n", ModuleUnderVoltageLimit());
+    out->printf("DischargeHighTemperatureLimit: %.1f\n", DischargeHighTemperatureLimit());
+    out->printf("DischargeLowTemperatureLimit: %.1f\n", DischargeLowTemperatureLimit());
+    out->printf("DischargeCurrentLimit: %.3f\n", DischargeCurrentLimit());
+    
 }

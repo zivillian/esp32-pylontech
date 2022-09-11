@@ -70,6 +70,7 @@
                     uint16_t GetUInt16(unsigned int begin);
                 public:
                     PylonInfo(String info);
+                    virtual void print(Print *out)=0;
             };
 
             class PylonSerialnumber:PylonInfo{
@@ -77,6 +78,7 @@
                     uint8_t Address();
                     String Serialnumber();
                     PylonSerialnumber(String info);
+                    void print(Print *out);
             };
 
             class PylonManufacturerInfo:PylonInfo{
@@ -86,6 +88,7 @@
                     uint8_t SoftwareMinorVersion();
                     String Manufacturer();
                     PylonManufacturerInfo(String info);
+                    void print(Print *out);
             };
 
             class PylonFirmwareInfo:PylonInfo{
@@ -97,6 +100,7 @@
                     uint8_t MainlineMinorVersion();
                     uint8_t MainlinePatchVersion();
                     PylonFirmwareInfo(String info);
+                    void print(Print *out);
             };
 
             class PylonSystemParameter:PylonInfo{
@@ -115,6 +119,7 @@
                     float DischargeLowTemperatureLimit();
                     float DischargeCurrentLimit();
                     PylonSystemParameter(String info);
+                    void print(Print *out);
             };
     };
 #endif /* PYLONTECH_H */
