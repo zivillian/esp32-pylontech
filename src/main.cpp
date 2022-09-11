@@ -85,20 +85,37 @@ void loop() {
       mqttPublish("polling", String(i));
       auto frame = client.SendCommand(Pylonframe(2 + i, CommandInformation::ProtocolVersion));
       if (frame.HasError){
-        dbgln("version failed");
-        mqttPublish("error/id", String(i));
-        mqttPublish("error/version", String(frame.Cid2, HEX));
+        dbg("version failed for ");
+        dbgln(i);
         continue;
       }
+
       frame = client.SendCommand(Pylonframe(frame.MajorVersion, frame.MinorVersion, 2 + i, CommandInformation::ManufacturerInfo));
       if (frame.HasError){
-        dbgln("manufacturer failed");
-        mqttPublish("error/id", String(i));
-        mqttPublish("error/manufacturer", String(frame.Cid2, HEX));
+        dbg("manufacturer failed for ");
+        dbgln(i);
         continue;
       }
       auto manufacturer = Pylonframe::PylonManufacturerInfo(frame.Info);
       manufacturer.publish([i](String name, String value){mqttPublish(String(i) + "/" + name, value);});
+
+      frame = client.SendCommand(Pylonframe(frame.MajorVersion, frame.MinorVersion, 2 + i, CommandInformation::FirmwareInfo));
+      if (frame.HasError){
+        dbg("firmware failed for ");
+        dbgln(i);
+        continue;
+      }
+      auto firmware = Pylonframe::PylonFirmwareInfo(frame.Info);
+      firmware.publish([i](String name, String value){mqttPublish(String(i) + "/" + name, value);});
+      
+      frame = client.SendCommand(Pylonframe(frame.MajorVersion, frame.MinorVersion, 2 + i, CommandInformation::Serialnumber));
+      if (frame.HasError){
+        dbg("serialnumber failed for ");
+        dbgln(i);
+        continue;
+      }
+      auto serialnumber = Pylonframe::PylonSerialnumber(frame.Info);
+      serialnumber.publish([i](String name, String value){mqttPublish(String(i) + "/" + name, value);});
     }
     
     delay(config.getInterval());
