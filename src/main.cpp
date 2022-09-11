@@ -128,6 +128,15 @@ void loop() {
       }
       auto system = Pylonframe::PylonSystemParameter(frame.Info);
       system.publish([i](String name, String value){mqttPublish(String(i) + "/" + name, value);});
+      
+      frame = client.SendCommand(Pylonframe(frame.MajorVersion, frame.MinorVersion, 2 + i, CommandInformation::GetChargeDischargeManagementInfo));
+      if (frame.HasError){
+        dbg("chargeDischarge failed for ");
+        dbgln(i);
+        continue;
+      }
+      auto chargeDischarge = Pylonframe::PylonChargeDischargeManagementInfo(frame.Info);
+      chargeDischarge.publish([i](String name, String value){mqttPublish(String(i) + "/" + name, value);});
     }
     
     delay(config.getInterval());

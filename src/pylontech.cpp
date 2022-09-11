@@ -463,7 +463,15 @@ void Pylonframe::PylonChargeDischargeManagementInfo::print(Print *out) {
 
 void Pylonframe::PylonChargeDischargeManagementInfo::publish(PublishFunction callback){
     if (callback){
-        //todo
+        callback("chargeDischargeManagement/chargeVoltageLimit", String(ChargeVoltageLimit(), 3));
+        callback("chargeDischargeManagement/dischargeVoltageLimit", String(DischargeVoltageLimit(), 3));
+        callback("chargeDischargeManagement/chargeCurrentLimit", String(ChargeCurrentLimit(), 1));
+        callback("chargeDischargeManagement/dischargeCurrentLimit", String(DischargeCurrentLimit(), 1));
+        callback("chargeDischargeManagement/chargeEnabled", Status() & ChargeDischargeStatus::ChargeEnabled?"true":"false");
+        callback("chargeDischargeManagement/dischargeEnabled", Status() & ChargeDischargeStatus::DischargeEnabled?"true":"false");
+        callback("chargeDischargeManagement/chargeImmediately1", Status() & ChargeDischargeStatus::ChargeImmediately1?"true":"false");
+        callback("chargeDischargeManagement/chargeImmediately2", Status() & ChargeDischargeStatus::ChargeImmediately2?"true":"false");
+        callback("chargeDischargeManagement/fullChargeRequest", Status() & ChargeDischargeStatus::FullChargeRequest?"true":"false");
     }
 }
 
