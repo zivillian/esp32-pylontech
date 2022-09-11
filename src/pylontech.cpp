@@ -405,7 +405,18 @@ void Pylonframe::PylonSystemParameter::publish(PublishFunction callback){
     if (callback){
         callback("system/unreadAlarmValueChange", InfoFlags() & PylonInfoFlags::UnreadAlarmValueChange?"true":"false");
         callback("system/unreadSwitchingValueChange", InfoFlags() & PylonInfoFlags::UnreadSwitchingValueChange?"true":"false");
-        //todo
+        callback("system/cellHighVoltageLimit", String(CellHighVoltageLimit(), 3));
+        callback("system/cellLowVoltageLimit", String(CellLowVoltageLimit(), 3));
+        callback("system/cellUnderVoltageLimit", String(CellUnderVoltageLimit(), 3));
+        callback("system/chargeHighTemperatureLimit", String(ChargeHighTemperatureLimit(), 1));
+        callback("system/chargeLowTemperatureLimit", String(ChargeLowTemperatureLimit(), 1));
+        callback("system/chargeCurrentLimit", String(ChargeCurrentLimit(), 3));
+        callback("system/moduleHighVoltageLimit", String(ModuleHighVoltageLimit(), 3));
+        callback("system/moduleLowVoltageLimit", String(ModuleLowVoltageLimit(), 3));
+        callback("system/moduleUnderVoltageLimit", String(ModuleUnderVoltageLimit(), 3));
+        callback("system/dischargeHighTemperatureLimit", String(DischargeHighTemperatureLimit(), 1));
+        callback("system/dischargeLowTemperatureLimit", String(DischargeLowTemperatureLimit(), 1));
+        callback("system/dischargeCurrentLimit", String(DischargeCurrentLimit(), 3));
     }
 }
 

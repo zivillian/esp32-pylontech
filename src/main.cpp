@@ -116,6 +116,15 @@ void loop() {
       }
       auto serialnumber = Pylonframe::PylonSerialnumber(frame.Info);
       serialnumber.publish([i](String name, String value){mqttPublish(String(i) + "/" + name, value);});
+      
+      frame = client.SendCommand(Pylonframe(frame.MajorVersion, frame.MinorVersion, 2 + i, CommandInformation::SystemParameterFixedPoint));
+      if (frame.HasError){
+        dbg("system failed for ");
+        dbgln(i);
+        continue;
+      }
+      auto system = Pylonframe::PylonSystemParameter(frame.Info);
+      system.publish([i](String name, String value){mqttPublish(String(i) + "/" + name, value);});
     }
     
     delay(config.getInterval());
