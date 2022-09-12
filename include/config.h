@@ -14,6 +14,8 @@
             String _mqttHost;
             uint16_t _mqttPort;
             String _mqttPrefix;
+            String _mqttUsername;
+            String _mqttPassword;
 
         public:
             uint8_t getModuleCount();
@@ -26,6 +28,10 @@
             void setMqttPort(uint16_t value);
             String getMqttPrefix();
             void setMqttPrefix(String value);
+            String getMqttUsername();
+            void setMqttUsername(String value);
+            String getMqttPassword();
+            void setMqttPassword(String value);
             Config();
             void begin(Preferences *prefs);
     };

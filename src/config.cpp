@@ -7,6 +7,8 @@ Config::Config()
     ,_mqttHost("")
     ,_mqttPort(1883)
     ,_mqttPrefix("pylontech")
+    ,_mqttUsername("")
+    ,_mqttPassword("")
 {}
 
 void Config::begin(Preferences *prefs)
@@ -17,6 +19,8 @@ void Config::begin(Preferences *prefs)
     _mqttHost = _prefs->getString("mqtthost", _mqttHost);
     _mqttPort = _prefs->getUShort("mqttport", _mqttPort);
     _mqttPrefix = _prefs->getString("mqttprefix", _mqttPrefix);
+    _mqttUsername = _prefs->getString("mqttuser", _mqttUsername);
+    _mqttPassword = _prefs->getString("mqttpass", _mqttPassword);
 }
 
 uint8_t Config::getModuleCount(){
@@ -69,4 +73,26 @@ void Config::setMqttPrefix(String value){
     if (_mqttPrefix.equals(value)) return;
     _mqttPrefix = value;
     _prefs->putString("mqttprefix", value);
+}
+
+String Config::getMqttUsername()
+{
+    return _mqttUsername;
+}
+
+void Config::setMqttUsername(String value){
+    if (_mqttUsername.equals(value)) return;
+    _mqttUsername = value;
+    _prefs->putString("mqttuser", value);
+}
+
+String Config::getMqttPassword()
+{
+    return _mqttPassword;
+}
+
+void Config::setMqttPassword(String value){
+    if (_mqttPassword.equals(value)) return;
+    _mqttPassword = value;
+    _prefs->putString("mqttpass", value);
 }
