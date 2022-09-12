@@ -137,6 +137,24 @@ void loop() {
       }
       auto chargeDischarge = Pylonframe::PylonChargeDischargeManagementInfo(frame.Info);
       chargeDischarge.publish([i](String name, String value){mqttPublish(String(i) + "/" + name, value);});
+      
+      frame = client.SendCommand(Pylonframe(frame.MajorVersion, frame.MinorVersion, 2 + i, CommandInformation::AnalogValueFixedPoint));
+      if (frame.HasError){
+        dbg("analog failed for ");
+        dbgln(i);
+        continue;
+      }
+      auto analog = Pylonframe::PylonAnalogValue(frame.Info);
+      analog.publish([i](String name, String value){mqttPublish(String(i) + "/" + name, value);});
+      
+      frame = client.SendCommand(Pylonframe(frame.MajorVersion, frame.MinorVersion, 2 + i, CommandInformation::AlarmInfo));
+      if (frame.HasError){
+        dbg("alarm failed for ");
+        dbgln(i);
+        continue;
+      }
+      auto alarm = Pylonframe::PylonAlarmInfo(frame.Info);
+      alarm.publish([i](String name, String value){mqttPublish(String(i) + "/" + name, value);});
     }
     
     delay(config.getInterval());

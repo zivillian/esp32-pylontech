@@ -590,7 +590,7 @@ void Pylonframe::PylonAlarmInfo::print(Print *out) {
     out->printf("Address: %u\n", Address());
     for (size_t i = 0; i < CellCount(); i++)
     {
-        out->printf("CellVoltage%u: %s\n", i, Name(CellVoltage(i)).c_str());
+        out->printf("CellVoltage%u: %s\n", i + 1, Name(CellVoltage(i)).c_str());
     }
     out->printf("BmsTemperature: %s\n", Name(BmsTemperature()).c_str());
     out->printf("TemperatureCell1to4: %s\n", Name(TemperatureCell1to4()).c_str());
@@ -622,13 +622,50 @@ void Pylonframe::PylonAlarmInfo::print(Print *out) {
     auto cellError = CellError();
     for (size_t i = 0; i < 16; i++)
     {
-        out->printf("CellError%u: %s\n", i, cellError & 1<<i?"true":"false");
+        out->printf("CellError%u: %s\n", i + 1, cellError & 1<<i?"true":"false");
     }
 }
 
 void Pylonframe::PylonAlarmInfo::publish(PublishFunction callback){
     if (callback){
-        //todo
+        callback("alarm/unreadAlarmValueChange", InfoFlags() & PylonInfoFlags::UnreadAlarmValueChange?"true":"false");
+        callback("alarm/unreadSwitchingValueChange", InfoFlags() & PylonInfoFlags::UnreadSwitchingValueChange?"true":"false");
+        for (size_t i = 0; i < CellCount(); i++)
+        {
+            callback("alarm/cellVoltages/cell" + String(i + 1), Name(CellVoltage(i)));
+        }
+        callback("alarm/bmsTemperature", Name(BmsTemperature()));
+        callback("alarm/temperatureCell1to4", Name(TemperatureCell1to4()));
+        callback("alarm/temperatureCell5to8", Name(TemperatureCell5to8()));
+        callback("alarm/temperatureCell9to12", Name(TemperatureCell9to12()));
+        callback("alarm/temperatureCell13to15", Name(TemperatureCell13to15()));
+        if (TemperatureCount() > 5){
+            callback("alarm/mosfetTemperature", Name(MosfetTemperature()));
+        }
+        callback("alarm/chargeCurrent", Name(ChargeCurrent()));
+        callback("alarm/moduleVoltage", Name(ModuleVoltage()));
+        callback("alarm/dischargeCurrent", Name(DischargeCurrent()));
+        callback("alarm/status1/moduleUnderVoltage", Status1() & AlarmStatus1::ModuleUnderVoltage?"true":"false");
+        callback("alarm/status1/chargeOverTemperature", Status1() & AlarmStatus1::ChargeOverTemperature?"true":"false");
+        callback("alarm/status1/dischargeOverTemperature", Status1() & AlarmStatus1::DischargeOverTemperature?"true":"false");
+        callback("alarm/status1/dischargeOverCurrent", Status1() & AlarmStatus1::DischargeOverCurrent?"true":"false");
+        callback("alarm/status1/chargeOverCurrent", Status1() & AlarmStatus1::ChargeOverCurrent?"true":"false");
+        callback("alarm/status1/cellUnderVoltage", Status1() & AlarmStatus1::CellUnderVoltage?"true":"false");
+        callback("alarm/status1/moduleOverVoltage", Status1() & AlarmStatus1::ModuleOverVoltage?"true":"false");
+        callback("alarm/status2/usingBatteryModulePower", Status2() & AlarmStatus2::UsingBatteryModulePower?"true":"false");
+        callback("alarm/status2/dischargeMosfet", Status2() & AlarmStatus2::DischargeMosfet?"true":"false");
+        callback("alarm/status2/chargeMosfet", Status2() & AlarmStatus2::ChargeMosfet?"true":"false");
+        callback("alarm/status2/preMosfet", Status2() & AlarmStatus2::PreMosfet?"true":"false");
+        callback("alarm/status3/effectiveChargeCurrent", Status3() & AlarmStatus3::EffectiveChargeCurrent?"true":"false");
+        callback("alarm/status3/effectiveDischargeCurrent", Status3() & AlarmStatus3::EffectiveDischargeCurrent?"true":"false");
+        callback("alarm/status3/heater", Status3() & AlarmStatus3::Heater?"true":"false");
+        callback("alarm/status3/fullyCharged", Status3() & AlarmStatus3::FullyCharged?"true":"false");
+        callback("alarm/status3/buzzer", Status3() & AlarmStatus3::Buzzer?"true":"false");
+        auto cellError = CellError();
+        for (size_t i = 0; i < 16; i++)
+        {
+            callback("alarm/cellErrors/cell" + String(i + 1), cellError & 1<<i?"true":"false");
+        }
     }
 }
 
@@ -733,7 +770,7 @@ void Pylonframe::PylonAnalogValue::print(Print *out) {
     out->printf("Address: %u\n", Address());
     for (size_t i = 0; i < CellCount(); i++)
     {
-        out->printf("CellVoltage%u: %.3f\n", i, CellVoltage(i));
+        out->printf("CellVoltage%u: %.3f\n", i + 1, CellVoltage(i));
     }
     out->printf("BmsTemperature: %.1f\n", BmsTemperature());
     out->printf("TemperatureCell1to4: %.1f\n", TemperatureCell1to4());
@@ -749,6 +786,21 @@ void Pylonframe::PylonAnalogValue::print(Print *out) {
 
 void Pylonframe::PylonAnalogValue::publish(PublishFunction callback){
     if (callback){
-        //todo
+        callback("analog/unreadAlarmValueChange", InfoFlags() & PylonInfoFlags::UnreadAlarmValueChange?"true":"false");
+        callback("analog/unreadSwitchingValueChange", InfoFlags() & PylonInfoFlags::UnreadSwitchingValueChange?"true":"false");
+        for (size_t i = 0; i < CellCount(); i++)
+        {
+            callback("analog/cellVoltage" + String(i + 1), String(CellVoltage(i), 3));
+        }
+        callback("analog/bmsTemperature", String(BmsTemperature(), 1));
+        callback("analog/avgTemperatureCell1to4", String(TemperatureCell1to4(), 1));
+        callback("analog/avgTemperatureCell5to8", String(TemperatureCell5to8(), 1));
+        callback("analog/avgTemperatureCell9to12", String(TemperatureCell9to12(), 1));
+        callback("analog/avgTemperatureCell13to15", String(TemperatureCell13to15(), 1));
+        callback("analog/current", String(Current(), 1));
+        callback("analog/moduleVoltage", String(ModuleVoltage(), 3));
+        callback("analog/remainingCapacity", String(RemainingCapacity(), 3));
+        callback("analog/totalCapacity", String(TotalCapacity(), 3));
+        callback("analog/cycleNumber", String(CycleNumber()));
     }
 }
