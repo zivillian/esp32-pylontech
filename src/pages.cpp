@@ -5,7 +5,6 @@ void setupPages(AsyncWebServer *server, WiFiManager *wm, Config *config, Pyloncl
     dbgln("[webserver] GET /");
     auto *response = request->beginResponseStream("text/html");
     sendResponseHeader(response, "Main");
-    sendButton(response, "Status", "status");
     sendButton(response, "Config", "config");
     sendButton(response, "Debug", "debug");
     sendButton(response, "Firmware update", "update");
