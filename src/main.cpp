@@ -64,7 +64,7 @@ void setup() {
       mqttClient.setServer(config.getMqttHost().c_str(), config.getMqttPort());
     }
     if (config.getMqttUsername().length() > 0){
-      mqttClient.setCredentials(config.getMqttUsername().c_str(), config.getMqttPassword().c_str());
+      mqttClient.setCredentials(strdup(config.getMqttUsername().c_str()), strdup(config.getMqttPassword().c_str()));
     }
     mqttClient.onConnect(onMqttConnect);
     mqttClient.onDisconnect(onMqttDisconnect);
