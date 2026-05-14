@@ -4,10 +4,11 @@
     #include <ESPAsyncWebServer.h>
     #include <AsyncMqttClient.h>
     #include <Update.h>
+    #include <functional>
     #include "config.h"
     #include "pylontech.h"
 
-    void setupPages(AsyncWebServer *server, WiFiManager *wm, Config *config, Pylonclient *client, AsyncMqttClient *mqtt);
+    void setupPages(AsyncWebServer *server, WiFiManager *wm, Config *config, Pylonclient *client, AsyncMqttClient *mqtt, std::function<void()> onMqttConfigChanged);
     void sendResponseHeader(AsyncResponseStream *response, const char *title);
     void sendResponseTrailer(AsyncResponseStream *response);
     void sendButton(AsyncResponseStream *response, const char *title, const char *action, const char *css = "");

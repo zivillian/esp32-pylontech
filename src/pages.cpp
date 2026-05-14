@@ -2,7 +2,90 @@
 
 extern unsigned long wifiReconnectCount;
 
-void setupPages(AsyncWebServer *server, WiFiManager *wm, Config *config, Pylonclient *client, AsyncMqttClient *mqtt){
+static void renderWifiPage(AsyncResponseStream *response){
+  sendResponseHeader(response, "WiFi");
+  response->print("<h4>Current connection</h4>");
+  response->print("<table>");
+  response->printf("<tr><td>SSID:</td><td>%s</td></tr>", WiFi.SSID().c_str());
+  response->printf("<tr><td>BSSID:</td><td>%s</td></tr>", WiFi.BSSIDstr().c_str());
+  response->printf("<tr><td>RSSI:</td><td>%d dBm</td></tr>", WiFi.RSSI());
+  response->printf("<tr><td>Channel:</td><td>%d</td></tr>", WiFi.channel());
+  response->printf("<tr><td>IP:</td><td>%s</td></tr>", WiFi.localIP().toString().c_str());
+  response->print("</table><p></p>");
+
+  response->print("<h4>Networks</h4>");
+  int scanState = WiFi.scanComplete();
+  if (scanState == WIFI_SCAN_RUNNING) {
+    response->print("<meta http-equiv=\"refresh\" content=\"1; url=/wifi\">");
+    response->print("<p>Scanning...</p>");
+  } else if (scanState == WIFI_SCAN_FAILED) {
+    response->print("<p>No scan yet. Click Rescan.</p>");
+  } else if (scanState == 0) {
+    response->print("<p>No networks found.</p>");
+  } else {
+    response->print("<table>"
+      "<tr><th>SSID</th><th>RSSI</th><th>Ch</th><th>Lock</th></tr>");
+    for (int i = 0; i < scanState; i++) {
+      String ssid = WiFi.SSID(i);
+      String escSsid = ssid;
+      escSsid.replace("\"", "&quot;");
+      escSsid.replace("<", "&lt;");
+      escSsid.replace(">", "&gt;");
+      bool locked = WiFi.encryptionType(i) != WIFI_AUTH_OPEN;
+      response->printf(
+        "<tr class=\"wn\" data-ssid=\"%s\" style=\"cursor:pointer\">"
+        "<td>%s</td><td>%d dBm</td><td>%d</td><td>%s</td>"
+        "</tr>",
+        escSsid.c_str(), escSsid.c_str(), WiFi.RSSI(i), WiFi.channel(i),
+        locked ? "yes" : "no");
+    }
+    response->print("</table>");
+  }
+  response->print("<p></p>"
+    "<form method=\"get\" action=\"/wifi/scan\">"
+      "<button>Rescan</button>"
+    "</form><p></p>");
+
+  response->print("<h4>Edit</h4>");
+  response->print("<form method=\"post\" action=\"/wifi\">"
+    "<table>"
+      "<tr>"
+        "<td><label for=\"ssid\">SSID</label></td>"
+        "<td>");
+  response->printf("<input type=\"text\" id=\"ssid\" name=\"ssid\" value=\"%s\">",
+    WiFi.SSID().c_str());
+  response->print("</td>"
+      "</tr>"
+      "<tr>"
+        "<td><label for=\"psk\">Password</label></td>"
+        "<td><input type=\"password\" id=\"psk\" name=\"psk\" value=\"\"></td>"
+      "</tr>"
+    "</table>"
+    "<button>Save and reboot</button>"
+    "</form><p></p>");
+
+  sendButton(response, "Back", "/");
+  response->print("<p></p>"
+    "<form method=\"post\" action=\"/wifi/erase\">"
+      "<button class=\"r\">Erase WiFi config</button>"
+    "</form>");
+
+  response->print("<script>"
+    "(function(){"
+      "var rows=document.querySelectorAll('tr.wn');"
+      "var input=document.getElementById('ssid');"
+      "rows.forEach(function(r){"
+        "r.addEventListener('click',function(){"
+          "input.value=r.dataset.ssid;"
+          "document.getElementById('psk').focus();"
+        "});"
+      "});"
+    "})();"
+    "</script>");
+  sendResponseTrailer(response);
+}
+
+void setupPages(AsyncWebServer *server, WiFiManager *wm, Config *config, Pylonclient *client, AsyncMqttClient *mqtt, std::function<void()> onMqttConfigChanged){
   server->on("/", HTTP_GET, [](AsyncWebServerRequest *request){
     dbgln("[webserver] GET /");
     auto *response = request->beginResponseStream("text/html");
@@ -11,12 +94,12 @@ void setupPages(AsyncWebServer *server, WiFiManager *wm, Config *config, Pyloncl
     sendButton(response, "Config", "config");
     sendButton(response, "Debug", "debug");
     sendButton(response, "Firmware update", "update");
-    sendButton(response, "WiFi reset", "wifi", "r");
+    sendButton(response, "WiFi", "wifi");
     sendButton(response, "Reboot", "reboot", "r");
     sendResponseTrailer(response);
     request->send(response);
   });
-  server->on("/info", HTTP_GET, [](AsyncWebServerRequest *request){
+  server->on("/info", HTTP_GET, [config, mqtt](AsyncWebServerRequest *request){
     dbgln("[webserver] GET /info");
     auto *response = request->beginResponseStream("text/html");
     sendResponseHeader(response, "Info");
@@ -56,6 +139,23 @@ void setupPages(AsyncWebServer *server, WiFiManager *wm, Config *config, Pyloncl
     response->printf(
       "<tr><td>MAC:</td><td>%s</td></tr>",
       WiFi.macAddress().c_str());
+    if (config->getMqttHost().length() == 0) {
+      response->print(
+        "<tr><td>MQTT Status:</td><td>Not configured</td></tr>");
+    } else {
+      response->printf(
+        "<tr><td>MQTT Status:</td><td>%s</td></tr>",
+        mqtt->connected() ? "Connected" : "Disconnected");
+      response->printf(
+        "<tr><td>MQTT Host:</td><td>%s</td></tr>",
+        config->getMqttHost().c_str());
+      response->printf(
+        "<tr><td>MQTT Port:</td><td>%u</td></tr>",
+        config->getMqttPort());
+      response->printf(
+        "<tr><td>MQTT Prefix:</td><td>%s</td></tr>",
+        config->getMqttPrefix().c_str());
+    }
     response->print("</table><p></p>");
     sendButton(response, "Back", "/");
     sendResponseTrailer(response);
@@ -143,6 +243,26 @@ void setupPages(AsyncWebServer *server, WiFiManager *wm, Config *config, Pyloncl
     response->print("</td>"
       "</tr>"
         "</table>");
+    response->print("<h4>Polled info types</h4>");
+    response->print("<table>");
+    struct InfoTypeRow { const char *name; const char *label; uint8_t flag; };
+    const InfoTypeRow infoTypes[] = {
+      {"it_man", "Manufacturer info",        INFO_FLAG_MANUFACTURER},
+      {"it_fw",  "Firmware info",            INFO_FLAG_FIRMWARE},
+      {"it_sn",  "Serial number",            INFO_FLAG_SERIALNUMBER},
+      {"it_sys", "System parameter",         INFO_FLAG_SYSTEM_PARAMETER},
+      {"it_cd",  "Charge/discharge mgmt",    INFO_FLAG_CHARGE_DISCHARGE},
+      {"it_an",  "Analog values",            INFO_FLAG_ANALOG_VALUE},
+      {"it_al",  "Alarm info",               INFO_FLAG_ALARM},
+    };
+    for (auto &row : infoTypes) {
+      response->printf(
+        "<tr><td><label for=\"%s\">%s</label></td>"
+        "<td><input type=\"checkbox\" id=\"%s\" name=\"%s\" value=\"1\"%s></td></tr>",
+        row.name, row.label, row.name, row.name,
+        config->isInfoTypeEnabled(row.flag) ? " checked" : "");
+    }
+    response->print("</table>");
     response->print("<button class=\"r\">Save</button>"
       "</form>"
       "<p></p>");
@@ -157,7 +277,7 @@ void setupPages(AsyncWebServer *server, WiFiManager *wm, Config *config, Pyloncl
     sendResponseTrailer(response);
     request->send(response);
   });
-  server->on("/config", HTTP_POST, [config](AsyncWebServerRequest *request){
+  server->on("/config", HTTP_POST, [config, onMqttConfigChanged](AsyncWebServerRequest *request){
     dbgln("[webserver] POST /config");
     if (request->hasParam("c", true)){
       auto nr = request->getParam("c", true)->value().toInt();
@@ -193,6 +313,19 @@ void setupPages(AsyncWebServer *server, WiFiManager *wm, Config *config, Pyloncl
       auto password = request->getParam("pa", true)->value();
       config->setMqttPassword(password);
       dbgln("[webserver] saved mqtt password");
+    }
+    uint8_t infoFlags = 0;
+    if (request->hasParam("it_man", true)) infoFlags |= INFO_FLAG_MANUFACTURER;
+    if (request->hasParam("it_fw",  true)) infoFlags |= INFO_FLAG_FIRMWARE;
+    if (request->hasParam("it_sn",  true)) infoFlags |= INFO_FLAG_SERIALNUMBER;
+    if (request->hasParam("it_sys", true)) infoFlags |= INFO_FLAG_SYSTEM_PARAMETER;
+    if (request->hasParam("it_cd",  true)) infoFlags |= INFO_FLAG_CHARGE_DISCHARGE;
+    if (request->hasParam("it_an",  true)) infoFlags |= INFO_FLAG_ANALOG_VALUE;
+    if (request->hasParam("it_al",  true)) infoFlags |= INFO_FLAG_ALARM;
+    config->setInfoFlags(infoFlags);
+    dbgln("[webserver] saved info flags");
+    if (onMqttConfigChanged) {
+      onMqttConfigChanged();
     }
     request->redirect("/");    
   });
@@ -287,6 +420,12 @@ void setupPages(AsyncWebServer *server, WiFiManager *wm, Config *config, Pyloncl
         analog.print(response);
         break;
       }
+      case CommandInformation::ProtocolVersion:
+      {
+        response->printf("<br/>Major: %u<br/>Minor: %u",
+          frame.MajorVersion, frame.MinorVersion);
+        break;
+      }
     }
     response->print("</pre>");
     sendDebugForm(response, major, minor, address, cid2, info);
@@ -298,13 +437,78 @@ void setupPages(AsyncWebServer *server, WiFiManager *wm, Config *config, Pyloncl
     dbgln("[webserver] GET /update");
     auto *response = request->beginResponseStream("text/html");
     sendResponseHeader(response, "Firmware Update");
-    response->print("<form method=\"post\" enctype=\"multipart/form-data\">"
-      "<input type=\"file\" name=\"file\" id=\"file\" required/>"
-      "<p></p>"
-      "<button class=\"r\">Upload</button>"
+    response->print(
+      "<form id=\"otaForm\" method=\"post\" enctype=\"multipart/form-data\">"
+        "<input type=\"file\" name=\"file\" id=\"file\" required/>"
+        "<p></p>"
+        "<button class=\"r\" id=\"otaSubmit\">Upload</button>"
       "</form>"
+      "<progress id=\"otaProgress\" value=\"0\" max=\"100\" "
+        "style=\"width:100%;display:none\"></progress>"
+      "<div id=\"otaStatus\"></div>"
       "<p></p>");
     sendButton(response, "Back", "/");
+    response->print(
+      "<script>"
+      "(function(){"
+        "var form=document.getElementById('otaForm');"
+        "var btn=document.getElementById('otaSubmit');"
+        "var prog=document.getElementById('otaProgress');"
+        "var stat=document.getElementById('otaStatus');"
+        "form.addEventListener('submit',function(e){"
+          "e.preventDefault();"
+          "var f=document.getElementById('file');"
+          "if(!f.files.length){return;}"
+          "btn.disabled=true;"
+          "var data=new FormData(form);"
+          "var xhr=new XMLHttpRequest();"
+          "xhr.open('POST','/update');"
+          "prog.style.display='block';"
+          "prog.value=0;"
+          "stat.textContent='Uploading...';"
+          "var rebooting=false;"
+          "var startWaiting=function(){"
+            "if(rebooting)return;"
+            "rebooting=true;"
+            "prog.value=100;"
+            "var start=Date.now();"
+            "var poll=function(){"
+              "var elapsed=Math.round((Date.now()-start)/1000);"
+              "stat.textContent='Flashing and rebooting... waiting for device ('+elapsed+'s)';"
+              "fetch('/favicon.ico?_='+Date.now(),{cache:'no-store'}).then(function(r){"
+                "if(Date.now()-start>5000){location.replace('/');}"
+                "else{setTimeout(poll,1000);}"
+              "}).catch(function(){setTimeout(poll,1000);});"
+            "};"
+            "stat.textContent='Flashing and rebooting...';"
+            "setTimeout(poll,3000);"
+          "};"
+          "xhr.upload.onprogress=function(ev){"
+            "if(ev.lengthComputable){"
+              "var pct=Math.round(ev.loaded/ev.total*100);"
+              "prog.value=pct;"
+              "if(pct<100)stat.textContent='Uploading '+pct+'%';"
+              "if(pct>=100)startWaiting();"
+            "}"
+          "};"
+          "xhr.upload.onload=function(){startWaiting();};"
+          "xhr.onload=function(){"
+            "if(xhr.status>=200&&xhr.status<400){"
+              "startWaiting();"
+            "}else if(!rebooting){"
+              "btn.disabled=false;"
+              "stat.textContent='Upload failed: '+xhr.status+' '+xhr.statusText;"
+            "}"
+          "};"
+          "xhr.onerror=function(){"
+            "if(rebooting)return;"
+            "btn.disabled=false;"
+            "stat.textContent='Upload failed (network error)';"
+          "};"
+          "xhr.send(data);"
+        "});"
+      "})();"
+      "</script>");
     sendResponseTrailer(response);
     request->send(response);
   });
@@ -344,30 +548,50 @@ void setupPages(AsyncWebServer *server, WiFiManager *wm, Config *config, Pyloncl
       return;
     }
   });
-  server->on("/wifi", HTTP_GET, [](AsyncWebServerRequest *request){
-    dbgln("[webserver] GET /wifi");
-    auto *response = request->beginResponseStream("text/html");
-    sendResponseHeader(response, "WiFi reset");
-    response->print("<p class=\"e\">"
-        "This will delete the stored WiFi config<br/>"
-        "and restart the ESP in AP mode.<br/> Are you sure?"
-      "</p>");
-    sendButton(response, "Back", "/");
-    response->print("<p></p>"
-      "<form method=\"post\">"
-        "<button class=\"r\">Yes, do it!</button>"
-      "</form>");    
-    sendResponseTrailer(response);
-    request->send(response);
+  // IMPORTANT: more specific routes must be registered before /wifi, because
+  // ESPAsyncWebServer's /wifi handler also matches /wifi/* (it accepts URLs
+  // that start with "/wifi/"). Registering sub-routes first ensures they win.
+  server->on("/wifi/scan", HTTP_GET, [](AsyncWebServerRequest *request){
+    dbgln("[webserver] GET /wifi/scan");
+    WiFi.scanDelete();
+    WiFi.scanNetworks(true /* async */);
+    request->redirect("/wifi");
   });
-  server->on("/wifi", HTTP_POST, [wm](AsyncWebServerRequest *request){
-    dbgln("[webserver] POST /wifi");
+  server->on("/wifi/erase", HTTP_POST, [wm](AsyncWebServerRequest *request){
+    dbgln("[webserver] POST /wifi/erase");
     request->redirect("/");
     wm->erase();
     dbgln("[webserver] erased wifi config");
     dbgln("[webserver] rebooting...");
     ESP.restart();
     dbgln("[webserver] rebooted...");
+  });
+  server->on("/wifi", HTTP_GET, [](AsyncWebServerRequest *request){
+    dbgln("[webserver] GET /wifi");
+    auto *response = request->beginResponseStream("text/html");
+    renderWifiPage(response);
+    request->send(response);
+  });
+  server->on("/wifi", HTTP_POST, [](AsyncWebServerRequest *request){
+    dbgln("[webserver] POST /wifi");
+    String ssid = request->hasParam("ssid", true) ? request->getParam("ssid", true)->value() : String();
+    String psk  = request->hasParam("psk",  true) ? request->getParam("psk",  true)->value()  : String();
+    if (ssid.length() == 0) {
+      request->redirect("/wifi");
+      return;
+    }
+    auto *response = request->beginResponseStream("text/html");
+    sendResponseHeader(response, "WiFi");
+    response->print("<p>Saved. Rebooting and reconnecting to <b>");
+    response->print(ssid);
+    response->print("</b>...</p>");
+    sendResponseTrailer(response);
+    request->send(response);
+
+    WiFi.disconnect(true /* wifi off */, true /* erase ap */);
+    WiFi.begin(ssid.c_str(), psk.c_str());
+    delay(200);
+    ESP.restart();
   });
   server->on("/favicon.ico", [](AsyncWebServerRequest *request){
     dbgln("[webserver] GET /favicon.ico");
@@ -437,7 +661,7 @@ void sendResponseHeader(AsyncResponseStream *response, const char *title){
       "<meta charset='utf-8'>"
       "<meta name=\"viewport\" content=\"width=device-width,initial-scale=1,user-scalable=no\"/>");
     response->printf("<title>ESP32 Pylontech - %s</title>", title);
-    response->print("<link rel=\"stylesheet\" href=\"style.css\">"
+    response->print("<link rel=\"stylesheet\" href=\"/style.css\">"
       "</head>"
       "<body>"
       "<h2>ESP32 Pylontech</h2>");

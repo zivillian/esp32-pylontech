@@ -5,7 +5,16 @@
     #define debugSerial Serial
     #define pylonSerial Serial2
     #define DEBUG
-    
+
+    static const uint8_t INFO_FLAG_MANUFACTURER     = 0x01;
+    static const uint8_t INFO_FLAG_FIRMWARE         = 0x02;
+    static const uint8_t INFO_FLAG_SERIALNUMBER     = 0x04;
+    static const uint8_t INFO_FLAG_SYSTEM_PARAMETER = 0x08;
+    static const uint8_t INFO_FLAG_CHARGE_DISCHARGE = 0x10;
+    static const uint8_t INFO_FLAG_ANALOG_VALUE     = 0x20;
+    static const uint8_t INFO_FLAG_ALARM            = 0x40;
+    static const uint8_t INFO_FLAG_ALL              = 0x7F;
+
     class Config{
         private:
             Preferences *_prefs;
@@ -16,6 +25,7 @@
             String _mqttPrefix;
             String _mqttUsername;
             String _mqttPassword;
+            uint8_t _infoFlags;
 
         public:
             uint8_t getModuleCount();
@@ -32,6 +42,9 @@
             void setMqttUsername(String value);
             String getMqttPassword();
             void setMqttPassword(String value);
+            uint8_t getInfoFlags();
+            void setInfoFlags(uint8_t value);
+            bool isInfoTypeEnabled(uint8_t flag);
             Config();
             void begin(Preferences *prefs);
     };

@@ -9,6 +9,7 @@ Config::Config()
     ,_mqttPrefix("pylontech")
     ,_mqttUsername("")
     ,_mqttPassword("")
+    ,_infoFlags(INFO_FLAG_ALL)
 {}
 
 void Config::begin(Preferences *prefs)
@@ -21,6 +22,7 @@ void Config::begin(Preferences *prefs)
     _mqttPrefix = _prefs->getString("mqttprefix", _mqttPrefix);
     _mqttUsername = _prefs->getString("mqttuser", _mqttUsername);
     _mqttPassword = _prefs->getString("mqttpass", _mqttPassword);
+    _infoFlags = _prefs->getUChar("infoflags", _infoFlags);
 }
 
 uint8_t Config::getModuleCount(){
@@ -95,4 +97,19 @@ void Config::setMqttPassword(String value){
     if (_mqttPassword.equals(value)) return;
     _mqttPassword = value;
     _prefs->putString("mqttpass", value);
+}
+
+uint8_t Config::getInfoFlags(){
+    return _infoFlags;
+}
+
+void Config::setInfoFlags(uint8_t value){
+    value &= INFO_FLAG_ALL;
+    if (_infoFlags == value) return;
+    _infoFlags = value;
+    _prefs->putUChar("infoflags", _infoFlags);
+}
+
+bool Config::isInfoTypeEnabled(uint8_t flag){
+    return (_infoFlags & flag) != 0;
 }
